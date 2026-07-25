@@ -4,858 +4,377 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automotive Sentinel - Fleet Management</title>
-    
-    <!-- Leaflet CSS for Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            color: #333;
-        }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            color: white;
-            padding: 0 30px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .logo i {
-            font-size: 32px;
-            color: #e94560;
-        }
-        
-        .logo h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-        
-        .logo span {
-            color: #e94560;
-        }
-        
-        .header-stats {
-            display: flex;
-            gap: 30px;
-            align-items: center;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
-            color: #e94560;
-        }
-        
-        .stat-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #aaa;
-        }
-        
-        .live-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: #4caf50;
-            margin-left: 10px;
-        }
-        
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #4caf50;
-            border-radius: 50%;
-            animation: pulse 0.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.3; transform: scale(1.5); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: 250px;
-            height: calc(100vh - 70px);
-            background: #1a1a2e;
-            padding: 20px 0;
-            overflow-y: auto;
-        }
-        
-        .nav-item {
-            padding: 14px 25px;
-            color: #aaa;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-            font-size: 14px;
-        }
-        
-        .nav-item:hover, .nav-item.active {
-            background: rgba(233, 69, 96, 0.1);
-            color: white;
-            border-left-color: #e94560;
-        }
-        
-        .nav-item i {
-            width: 20px;
-            text-align: center;
-        }
-        
-        /* Main Content */
-        .main-content {
-            margin-left: 250px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-        
-        /* Dashboard Cards */
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: transform 0.3s;
-        }
-        
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        }
-        
-        .card-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 0 30px; height: 70px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.3); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo i { font-size: 32px; color: #e94560; }
+        .logo h1 { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+        .logo span { color: #e94560; }
+        .header-stats { display: flex; gap: 30px; align-items: center; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #e94560; }
+        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
+        .live-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #4caf50; margin-left: 10px; }
+        .live-dot { width: 8px; height: 8px; background: #4caf50; border-radius: 50%; animation: pulse 0.5s infinite; }
+        .mqtt-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ff9800; margin-left: 10px; }
+        .mqtt-dot { width: 8px; height: 8px; background: #ff9800; border-radius: 50%; }
+        .mqtt-dot.connected { background: #4caf50; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+        .sidebar { position: fixed; top: 70px; left: 0; width: 250px; height: calc(100vh - 70px); background: #1a1a2e; padding: 20px 0; overflow-y: auto; }
+        .nav-item { padding: 14px 25px; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; border-left: 3px solid transparent; font-size: 14px; }
+        .nav-item:hover, .nav-item.active { background: rgba(233, 69, 96, 0.1); color: white; border-left-color: #e94560; }
+        .nav-item i { width: 20px; text-align: center; }
+        .main-content { margin-left: 250px; margin-top: 70px; padding: 30px; min-height: calc(100vh - 70px); }
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 20px; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .card-icon { width: 55px; height: 55px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
         .card-icon.vehicles { background: #e3f2fd; color: #1976d2; }
         .card-icon.drivers { background: #e8f5e9; color: #388e3c; }
         .card-icon.depots { background: #fff3e0; color: #f57c00; }
         .card-icon.maintenance { background: #fce4ec; color: #c62828; }
-        
-        .card-info h3 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        
-        .card-info p {
-            color: #777;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        /* Map Section */
-        .map-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .section-header h2 {
-            font-size: 18px;
-            color: #1a1a2e;
-        }
-        
-        .section-header-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .refresh-btn {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background 0.3s;
-        }
-        
-        .refresh-btn:hover {
-            background: #c73a54;
-        }
-        
-        #map {
-            height: 450px;
-            border-radius: 8px;
-            border: 2px solid #e0e0e0;
-        }
-        
-        /* Vehicle Table */
-        .table-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th {
-            background: #f8f9fa;
-            padding: 14px 15px;
-            text-align: left;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #666;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        td {
-            padding: 14px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
-        
-        tr:hover td {
-            background: #f8f9fa;
-        }
-        
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .status-active {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .status-idle {
-            background: #fff3e0;
-            color: #e65100;
-        }
-        
-        .status-offline {
-            background: #fce4ec;
-            color: #c62828;
-        }
-        
-        /* Pages */
-        .page {
-            display: none;
-        }
-        
-        .page.active {
-            display: block;
-        }
-        
-        /* Form Styles */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary {
-            background: #e94560;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #c73a54;
-        }
-        
-        .btn-secondary {
-            background: #f0f2f5;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #777;
-        }
-        
-        .loading i {
-            font-size: 40px;
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-        
-        .countdown {
-            font-size: 11px;
-            color: #4caf50;
-            font-weight: 600;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 60px;
-            }
-            .nav-item span {
-                display: none;
-            }
-            .main-content {
-                margin-left: 60px;
-            }
-            .header-stats {
-                display: none;
-            }
-            .dashboard-cards {
-                grid-template-columns: 1fr;
-            }
-        }
+        .card-info h3 { font-size: 28px; margin-bottom: 5px; }
+        .card-info p { color: #777; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .map-section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 30px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .section-header h2 { font-size: 18px; color: #1a1a2e; }
+        .section-header-right { display: flex; align-items: center; gap: 15px; }
+        .refresh-btn { background: #e94560; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .refresh-btn:hover { background: #c73a54; }
+        #map { height: 450px; border-radius: 8px; }
+        .table-section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 14px 15px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #666; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 14px 15px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-active { background: #e8f5e9; color: #2e7d32; }
+        .status-idle { background: #fff3e0; color: #e65100; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .btn-primary { background: #e94560; color: white; }
+        .btn-primary:hover { background: #c73a54; }
+        .btn-secondary { background: #f0f2f5; color: #333; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .loading { text-align: center; padding: 40px; color: #777; }
+        .daily-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .daily-stat-card { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 10px; padding: 15px; text-align: center; }
+        .daily-stat-card.mileage { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #1a1a2e; }
+        .daily-stat-card.speed { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .daily-stat-card.hours { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #1a1a2e; }
+        .daily-stat-card.events { background: linear-gradient(135deg, #fa709a, #fee140); color: #1a1a2e; }
+        .daily-stat-value { font-size: 32px; font-weight: 700; }
+        .daily-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-top: 5px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 16px; padding: 30px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-close:hover { color: #e94560; }
+        @media (max-width: 768px) { .sidebar { width: 60px; } .nav-item span { display: none; } .main-content { margin-left: 60px; } .header-stats { display: none; } }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="logo">
             <i class="fas fa-shield-haltered"></i>
             <h1>AUTOMOTIVE <span>SENTINEL</span></h1>
         </div>
         <div class="header-stats">
-            <div class="stat-item">
-                <div class="stat-value" id="totalVehicles">0</div>
-                <div class="stat-label">Vehicles</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="activeVehicles">0</div>
-                <div class="stat-label">Active</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="totalDistance">0 km</div>
-                <div class="stat-label">Today's Distance</div>
-            </div>
-            <div class="live-indicator">
-                <div class="live-dot"></div>
-                LIVE <span class="countdown" id="refreshCountdown">(2s)</span>
-            </div>
+            <div class="stat-item"><div class="stat-value" id="totalVehicles">0</div><div class="stat-label">Vehicles</div></div>
+            <div class="stat-item"><div class="stat-value" id="activeVehicles">0</div><div class="stat-label">Active</div></div>
+            <div class="stat-item"><div class="stat-value" id="totalDistance">0 km</div><div class="stat-label">Distance</div></div>
+            <div class="live-indicator"><div class="live-dot"></div> LIVE <span id="refreshCountdown">(2s)</span></div>
+            <div class="mqtt-indicator"><div class="mqtt-dot" id="mqttDot"></div> MQTT <span id="mqttStatus">connecting</span></div>
         </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="sidebar">
-        <div class="nav-item active" onclick="showPage('dashboard')">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </div>
-        <div class="nav-item" onclick="showPage('vehicles')">
-            <i class="fas fa-truck"></i>
-            <span>Vehicles</span>
-        </div>
-        <div class="nav-item" onclick="showPage('drivers')">
-            <i class="fas fa-users"></i>
-            <span>Drivers</span>
-        </div>
-        <div class="nav-item" onclick="showPage('depots')">
-            <i class="fas fa-warehouse"></i>
-            <span>Depots</span>
-        </div>
-        <div class="nav-item" onclick="showPage('maintenance')">
-            <i class="fas fa-tools"></i>
-            <span>Maintenance</span>
-        </div>
-        <div class="nav-item" onclick="showPage('mileage')">
-            <i class="fas fa-road"></i>
-            <span>Mileage Log</span>
-        </div>
+        <div class="nav-item active" onclick="showPage('dashboard')"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></div>
+        <div class="nav-item" onclick="showPage('vehicles')"><i class="fas fa-truck"></i><span>Vehicles</span></div>
+        <div class="nav-item" onclick="showPage('drivers')"><i class="fas fa-users"></i><span>Drivers</span></div>
+        <div class="nav-item" onclick="showPage('depots')"><i class="fas fa-warehouse"></i><span>Depots</span></div>
+        <div class="nav-item" onclick="showPage('maintenance')"><i class="fas fa-tools"></i><span>Maintenance</span></div>
+        <div class="nav-item" onclick="showPage('mileage')"><i class="fas fa-road"></i><span>Mileage Log</span></div>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
-        <!-- Dashboard Page -->
         <div class="page active" id="dashboard-page">
             <div class="dashboard-cards">
-                <div class="card">
-                    <div class="card-icon vehicles">
-                        <i class="fas fa-truck"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardVehicles">0</h3>
-                        <p>Total Vehicles</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon drivers">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardDrivers">0</h3>
-                        <p>Assigned Drivers</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon depots">
-                        <i class="fas fa-warehouse"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3>3</h3>
-                        <p>Active Depots</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon maintenance">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardMaintenance">0</h3>
-                        <p>Due Maintenance</p>
-                    </div>
-                </div>
+                <div class="card" onclick="showPage('vehicles')"><div class="card-icon vehicles"><i class="fas fa-truck"></i></div><div class="card-info"><h3 id="cardVehicles">0</h3><p>Total Vehicles</p></div></div>
+                <div class="card" onclick="showPage('drivers')"><div class="card-icon drivers"><i class="fas fa-users"></i></div><div class="card-info"><h3 id="cardDrivers">0</h3><p>Assigned Drivers</p></div></div>
+                <div class="card" onclick="showPage('depots')"><div class="card-icon depots"><i class="fas fa-warehouse"></i></div><div class="card-info"><h3>3</h3><p>Active Depots</p></div></div>
+                <div class="card" onclick="showPage('maintenance')"><div class="card-icon maintenance"><i class="fas fa-tools"></i></div><div class="card-info"><h3 id="cardMaintenance">0</h3><p>Due Maintenance</p></div></div>
             </div>
-            
             <div class="map-section">
                 <div class="section-header">
                     <h2><i class="fas fa-map-marker-alt"></i> Live Fleet Tracking (2s Refresh)</h2>
                     <div class="section-header-right">
-                        <button class="refresh-btn" onclick="refreshAll()">
-                            <i class="fas fa-sync-alt"></i> Refresh Now
-                        </button>
+                        <button class="refresh-btn" onclick="refreshAll()"><i class="fas fa-sync-alt"></i> Refresh Now</button>
                     </div>
                 </div>
                 <div id="map"></div>
             </div>
-            
             <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-list"></i> Vehicle List</h2>
-                </div>
-                <div id="vehiclesTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading vehicles from flespi...</p>
-                    </div>
-                </div>
+                <div class="section-header"><h2><i class="fas fa-list"></i> Vehicle List</h2></div>
+                <div id="vehiclesTable"><div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading vehicles from flespi...</p></div></div>
             </div>
         </div>
 
-        <!-- Vehicles Page -->
         <div class="page" id="vehicles-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-truck"></i> All Vehicles</h2>
-                    <button class="refresh-btn" onclick="loadVehicles()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-                <div id="vehiclesTablePage">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading vehicles...</p>
-                    </div>
-                </div>
-            </div>
+            <div class="table-section"><div class="section-header"><h2><i class="fas fa-truck"></i> All Vehicles</h2><button class="refresh-btn" onclick="loadVehicles()"><i class="fas fa-sync-alt"></i> Refresh</button></div><div id="vehiclesTablePage"><div class="loading"><p>Loading...</p></div></div></div>
         </div>
 
-        <!-- Drivers Page -->
         <div class="page" id="drivers-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-users"></i> Driver Assignments</h2>
-                    <button class="btn btn-primary" onclick="showAddDriverForm()">
-                        <i class="fas fa-plus"></i> Assign Driver
-                    </button>
-                </div>
-                <div id="driversTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading drivers...</p>
-                    </div>
-                </div>
-            </div>
+            <div class="table-section"><div class="section-header"><h2><i class="fas fa-users"></i> Driver Assignments</h2><button class="btn btn-primary" onclick="showAddDriverForm()"><i class="fas fa-plus"></i> Assign Driver</button></div><div id="driversTable"><div class="loading"><p>Loading drivers...</p></div></div></div>
         </div>
 
-        <!-- Depots Page -->
         <div class="page" id="depots-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-warehouse"></i> Depot Locations</h2>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Depot Name</th>
-                            <th>Location</th>
-                            <th>Vehicles Assigned</th>
-                            <th>Contact</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Harare Central</strong></td>
-                            <td>-17.8252, 31.0335</td>
-                            <td>12</td>
-                            <td>+263 242 123456</td>
-                            <td><span class="status-badge status-active">Active</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Bulawayo Depot</strong></td>
-                            <td>-20.1457, 28.5873</td>
-                            <td>8</td>
-                            <td>+263 292 654321</td>
-                            <td><span class="status-badge status-active">Active</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mutare Branch</strong></td>
-                            <td>-18.9758, 32.6695</td>
-                            <td>5</td>
-                            <td>+263 202 789012</td>
-                            <td><span class="status-badge status-idle">Limited</span></td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="table-section"><div class="section-header"><h2><i class="fas fa-warehouse"></i> Depot Locations</h2></div>
+                <table><thead><tr><th>Depot Name</th><th>Location</th><th>Vehicles</th><th>Contact</th><th>Status</th></tr></thead>
+                <tbody><tr><td><strong>Harare Central</strong></td><td>-17.8252, 31.0335</td><td>12</td><td>+263 242 123456</td><td><span class="status-badge status-active">Active</span></td></tr>
+                <tr><td><strong>Bulawayo Depot</strong></td><td>-20.1457, 28.5873</td><td>8</td><td>+263 292 654321</td><td><span class="status-badge status-active">Active</span></td></tr>
+                <tr><td><strong>Mutare Branch</strong></td><td>-18.9758, 32.6695</td><td>5</td><td>+263 202 789012</td><td><span class="status-badge status-idle">Limited</span></td></tr></tbody></table>
             </div>
         </div>
 
-        <!-- Maintenance Page -->
         <div class="page" id="maintenance-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-tools"></i> Maintenance Schedule</h2>
-                    <button class="btn btn-primary" onclick="showAddMaintenanceForm()">
-                        <i class="fas fa-plus"></i> Schedule Service
-                    </button>
-                </div>
-                <div id="maintenanceTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading maintenance records...</p>
-                    </div>
-                </div>
-            </div>
+            <div class="table-section"><div class="section-header"><h2><i class="fas fa-tools"></i> Maintenance Schedule</h2><button class="btn btn-primary" onclick="showAddMaintenanceForm()"><i class="fas fa-plus"></i> Schedule Service</button></div><div id="maintenanceTable"><div class="loading"><p>Loading maintenance records...</p></div></div></div>
         </div>
 
-        <!-- Mileage Page -->
         <div class="page" id="mileage-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-road"></i> Mileage Log</h2>
-                    <button class="btn btn-primary" onclick="showAddMileageForm()">
-                        <i class="fas fa-plus"></i> Log Trip
-                    </button>
-                </div>
-                <div id="mileageTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading mileage data...</p>
-                    </div>
-                </div>
-            </div>
+            <div class="table-section"><div class="section-header"><h2><i class="fas fa-road"></i> Mileage Log</h2><button class="btn btn-primary" onclick="showAddMileageForm()"><i class="fas fa-plus"></i> Log Trip</button></div><div id="mileageTable"><div class="loading"><p>Loading mileage data...</p></div></div></div>
         </div>
     </div>
 
-    <!-- Leaflet JS for Maps -->
+    <!-- Vehicle Report Modal -->
+    <div class="modal" id="vehicleReportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="reportTitle">Vehicle Report</h2>
+                <button class="modal-close" onclick="closeReport()">&times;</button>
+            </div>
+            <div class="daily-stats-grid" id="reportDailyStats"></div>
+            <div id="reportDetails"></div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Main Application Script -->
     <script>
-        // Configuration
         const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
         const API_BASE = 'https://flespi.io/gw';
+        const MQTT_BROKER = 'wss://mqtt.flespi.io:443';
         
-        // Global variables
-        let map;
-        let markers = [];
-        let vehicleData = [];
-        let refreshTimer;
-        let countdownTimer;
-        let secondsLeft = 2;
+        let map, markers = [], vehicleData = [], secondsLeft = 2;
+        let mqttClient;
+        let dailySummaries = {}; // Store daily summaries by device ID
         
-        // Local storage data
         let drivers = JSON.parse(localStorage.getItem('as_drivers') || '[]');
         let maintenanceRecords = JSON.parse(localStorage.getItem('as_maintenance') || '[]');
         let mileageLogs = JSON.parse(localStorage.getItem('as_mileage') || '[]');
-        
-        // Initialize application
+
         function init() {
             initMap();
+            connectMQTT();
             loadVehicles();
             loadDrivers();
             loadMaintenance();
             loadMileage();
-            startAutoRefresh();
+            setInterval(() => { updateMap(); updateStats(); secondsLeft = 2; }, 2000);
+            setInterval(() => { secondsLeft--; if (secondsLeft < 0) secondsLeft = 2; document.getElementById('refreshCountdown').textContent = '(' + secondsLeft + 's)'; }, 1000);
         }
-        
-        // Initialize Map
+
         function initMap() {
             map = L.map('map').setView([-17.8252, 31.0335], 7);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(map);
-            
-            // Add depot markers
-            const depots = [
-                { name: 'Harare Central', lat: -17.8252, lng: 31.0335, icon: 'fa-warehouse' },
-                { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873, icon: 'fa-warehouse' },
-                { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695, icon: 'fa-warehouse' }
-            ];
-            
-            depots.forEach(depot => {
-                const depotIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background:#e94560;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas ${depot.icon}"></i></div>`,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15]
-                });
-                
-                L.marker([depot.lat, depot.lng], { icon: depotIcon })
-                    .addTo(map)
-                    .bindPopup(`<b>${depot.name}</b><br>Depot Location`);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(map);
+            [{ name: 'Harare Central', lat: -17.8252, lng: 31.0335 }, { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 }, { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }].forEach(d => {
+                L.marker([d.lat, d.lng], { icon: L.divIcon({ html: '<div style="background:#e94560;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>', iconSize: [30,30], iconAnchor: [15,15] }) }).addTo(map).bindPopup('<b>' + d.name + '</b><br>Depot');
             });
         }
-        
-        // Start auto-refresh timers
-        function startAutoRefresh() {
-            updateCountdown();
+
+        // ==================== MQTT CONNECTION ====================
+        function connectMQTT() {
+            document.getElementById('mqttStatus').textContent = 'connecting...';
+            document.getElementById('mqttDot').className = 'mqtt-dot';
             
-            // Refresh map every 2 seconds
-            refreshTimer = setInterval(() => {
-                updateMap();
-                updateStats();
-                secondsLeft = 2;
-                updateCountdown();
-            }, 2000);
-            
-            // Update countdown every second
-            countdownTimer = setInterval(() => {
-                secondsLeft--;
-                if (secondsLeft < 0) secondsLeft = 2;
-                updateCountdown();
-            }, 1000);
+            mqttClient = mqtt.connect(MQTT_BROKER, {
+                username: FLESPI_TOKEN,
+                password: '',
+                clientId: 'automotive_sentinel_' + Math.random().toString(16).substr(2, 8),
+                clean: true,
+                reconnectPeriod: 5000
+            });
+
+            mqttClient.on('connect', () => {
+                console.log('MQTT Connected');
+                document.getElementById('mqttStatus').textContent = 'connected';
+                document.getElementById('mqttDot').className = 'mqtt-dot connected';
+                subscribeToCalculators();
+            });
+
+            mqttClient.on('message', (topic, payload) => {
+                try {
+                    const data = JSON.parse(payload.toString());
+                    const topicParts = topic.split('/');
+                    // Topic format: flespi/state/gw/calcs/{calcId}/devices/{deviceId}/last
+                    const deviceId = topicParts[5];
+                    if (deviceId && data) {
+                        dailySummaries[deviceId] = {
+                            total_mileage_km: data.total_mileage_km || 0,
+                            driving_hours: data.driving_hours || 0,
+                            max_speed_kmh: data.max_speed_kmh || 0,
+                            harsh_accel_count: data.harsh_accel_count || 0,
+                            harsh_brake_count: data.harsh_brake_count || 0,
+                            harsh_events_total: data.harsh_events_total || 0,
+                            date: data.date || '',
+                            timestamp: new Date().toLocaleTimeString()
+                        };
+                        updateVehicleTables();
+                    }
+                } catch (e) {
+                    console.error('MQTT message parse error:', e);
+                }
+            });
+
+            mqttClient.on('error', (err) => {
+                console.error('MQTT Error:', err);
+                document.getElementById('mqttStatus').textContent = 'error';
+            });
+
+            mqttClient.on('reconnect', () => {
+                document.getElementById('mqttStatus').textContent = 'reconnecting...';
+                document.getElementById('mqttDot').className = 'mqtt-dot';
+            });
+
+            mqttClient.on('close', () => {
+                document.getElementById('mqttStatus').textContent = 'disconnected';
+                document.getElementById('mqttDot').className = 'mqtt-dot';
+            });
         }
-        
-        // Update countdown display
-        function updateCountdown() {
-            const el = document.getElementById('refreshCountdown');
-            if (el) {
-                el.textContent = `(${secondsLeft}s)`;
-            }
+
+        function subscribeToCalculators() {
+            // Fetch all calculators first to know which topics to subscribe to
+            fetch(API_BASE + '/calcs/all', {
+                headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const calcs = data.result || [];
+                calcs.forEach(calc => {
+                    // Subscribe to each calculator's devices
+                    fetch(API_BASE + '/calcs/' + calc.id + '/devices/all', {
+                        headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN }
+                    })
+                    .then(r => r.json())
+                    .then(devData => {
+                        const devices = devData.result || [];
+                        devices.forEach(dev => {
+                            const topic = 'flespi/state/gw/calcs/' + calc.id + '/devices/' + dev.id + '/last';
+                            mqttClient.subscribe(topic, { qos: 1 });
+                            console.log('Subscribed to:', topic);
+                        });
+                    })
+                    .catch(e => console.log('Calc devices fetch error:', e));
+                });
+            })
+            .catch(e => console.log('Calcs fetch error:', e));
         }
-        
-        // Load vehicle data from flespi
+
+        // ==================== VEHICLE DATA ====================
         async function loadVehicles() {
             try {
-                const response = await fetch(`${API_BASE}/devices/all`, {
-                    headers: {
-                        'Authorization': `FlespiToken ${FLESPI_TOKEN}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('API Error: ' + response.status);
-                }
-                
-                const data = await response.json();
-                vehicleData = data.result || [];
-                
+                const r = await fetch(API_BASE + '/devices/all', { headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN } });
+                if (!r.ok) throw new Error('Status: ' + r.status);
+                vehicleData = (await r.json()).result || [];
                 updateMap();
                 updateVehicleTables();
                 updateStats();
-                
-                console.log(`Loaded ${vehicleData.length} vehicles from flespi`);
-            } catch (error) {
-                console.error('Error loading vehicles:', error);
-                document.getElementById('vehiclesTable').innerHTML = 
-                    '<div class="loading"><i class="fas fa-exclamation-triangle" style="color:#e94560;"></i><p style="color:#e94560;">⚠️ Could not load vehicles. Check your flespi connection and token.</p></div>';
+            } catch (e) {
+                document.getElementById('vehiclesTable').innerHTML = '<div class="loading"><p style="color:#e94560;">Could not load vehicles. Check token or connection.</p></div>';
             }
         }
-        
-        // Update map with vehicle markers
+
         async function updateMap() {
-            // Clear existing vehicle markers
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            
-            if (vehicleData.length === 0) return;
-            
-            // Process each vehicle
-            for (const vehicle of vehicleData) {
+            for (const v of vehicleData) {
                 try {
-                    const response = await fetch(`${API_BASE}/devices/${vehicle.id}/messages`, {
-                        headers: {
-                            'Authorization': `FlespiToken ${FLESPI_TOKEN}`
-                        }
-                    });
-                    
-                    const msgData = await response.json();
-                    
-                    if (msgData.result && msgData.result.length > 0) {
-                        const lastMsg = msgData.result[msgData.result.length - 1];
-                        const lat = lastMsg['position.latitude'];
-                        const lng = lastMsg['position.longitude'];
-                        const speed = lastMsg['position.speed'] || 0;
-                        const course = lastMsg['position.course'] || 0;
-                        
+                    const r = await fetch(API_BASE + '/devices/' + v.id + '/messages', { headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN } });
+                    const d = await r.json();
+                    if (d.result && d.result.length > 0) {
+                        const m = d.result[d.result.length - 1];
+                        const lat = m['position.latitude'], lng = m['position.longitude'];
                         if (lat && lng) {
-                            // Create vehicle icon with direction
-                            const vehicleIcon = L.divIcon({
-                                className: 'vehicle-icon',
-                                html: `<div style="background:#1976d2;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:rotate(${course}deg);"><i class="fas fa-truck"></i></div>`,
-                                iconSize: [36, 36],
-                                iconAnchor: [18, 18]
-                            });
-                            
-                            const marker = L.marker([lat, lng], { icon: vehicleIcon })
-                                .addTo(map)
-                                .bindPopup(`
-                                    <div style="font-family:'Segoe UI',sans-serif;">
-                                        <b style="font-size:14px;">${vehicle.name || 'Vehicle ' + vehicle.id}</b><br>
-                                        <span style="color:#1976d2;">🚀 Speed: <b>${speed} km/h</b></span><br>
-                                        <span style="color:#666;">📡 Course: ${course}°</span><br>
-                                        <small style="color:#999;">ID: ${vehicle.id}</small><br>
-                                        <small style="color:#4caf50;">Updated: ${new Date().toLocaleTimeString()}</small>
-                                    </div>
-                                `);
-                            
-                            markers.push(marker);
+                            const daily = dailySummaries[v.id];
+                            const popupContent = '<b>' + (v.name || 'Vehicle ' + v.id) + '</b><br>Speed: ' + (m['position.speed'] || 0) + ' km/h' +
+                                (daily ? '<br><hr style="margin:5px 0;"><small>📅 Today: ' + daily.date + '</small><br><small>🛣️ Mileage: ' + daily.total_mileage_km.toFixed(2) + ' km</small><br><small>⏱️ Driving: ' + daily.driving_hours.toFixed(2) + ' hrs</small><br><small>🚀 Max Speed: ' + daily.max_speed_kmh + ' km/h</small><br><small>⚠️ Harsh Events: ' + daily.harsh_events_total + '</small>' : '') +
+                                '<br><small style="color:#4caf50;">Updated: ' + new Date().toLocaleTimeString() + '</small><br><button onclick="showVehicleReport(\'' + v.id + '\')" style="margin-top:5px;padding:4px 8px;background:#e94560;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">📊 Full Report</button>';
+                            const mk = L.marker([lat, lng], { icon: L.divIcon({ html: '<div style="background:#1976d2;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);"><i class="fas fa-truck"></i></div>', iconSize: [36,36], iconAnchor: [18,18] }) }).addTo(map).bindPopup(popupContent);
+                            markers.push(mk);
                         }
                     }
-                } catch (err) {
-                    // Skip vehicles with no location data
-                }
+                } catch (e) {}
             }
         }
-        
-        // Manual refresh
-        function refreshAll() {
-            secondsLeft = 2;
-            updateCountdown();
-            updateMap();
-            updateStats();
-        }
-        
-        // Update vehicle tables
+
+        function refreshAll() { secondsLeft = 2; updateMap(); updateStats(); }
+
         function updateVehicleTables() {
-            const tableHTML = buildVehicleTableHTML();
-            document.getElementById('vehiclesTable').innerHTML = tableHTML;
-            document.getElementById('vehiclesTablePage').innerHTML = tableHTML;
+            let h = vehicleData.length === 0 ? '<div class="loading"><p>No vehicles found. Add devices in flespi.</p></div>' : '<table><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Today\'s Mileage</th><th>Max Speed</th><th>Harsh Events</th><th>Driver</th><th>Report</th></tr></thead><tbody>';
+            vehicleData.forEach(v => {
+                const dr = drivers.find(d => d.vehicleId === v.id.toString());
+                const daily = dailySummaries[v.id];
+                h += '<tr><td><strong>' + (v.name || 'Unnamed') + '</strong></td><td><code>' + v.id + '</code></td><td><span class="status-badge status-active">Active</span></td><td>' + (daily ? daily.total_mileage_km.toFixed(2) + ' km' : '--') + '</td><td>' + (daily ? daily.max_speed_kmh + ' km/h' : '--') + '</td><td>' + (daily ? daily.harsh_events_total : '--') + '</td><td>' + (dr ? dr.name : '<span style="color:#999;">Unassigned</span>') + '</td><td><button class="btn btn-primary btn-sm" onclick="showVehicleReport(\'' + v.id + '\')"><i class="fas fa-chart-bar"></i> Report</button></td></tr>';
+            });
+            h += '</tbody></table>';
+            document.getElementById('vehiclesTable').innerHTML = h;
+            document.getElementById('vehiclesTablePage').innerHTML = h;
         }
-        
-        function buildVehicleTableHTML() {
-            if (vehicleData.length === 0) {
-                return '<div class="loading"><i class="fas fa-info-circle"></i><p>No vehicles found. Add devices to your flespi account to see them here.</p></div>';
+
+        function showVehicleReport(deviceId) {
+            const vehicle = vehicleData.find(v => v.id.toString() === deviceId.toString());
+            const daily = dailySummaries[deviceId];
+            const driver = drivers.find(d => d.vehicleId === deviceId.toString());
+            
+            document.getElementById('reportTitle').innerHTML = '<i class="fas fa-chart-bar"></i> ' + (vehicle ? vehicle.name || 'Vehicle ' + deviceId : 'Vehicle ' + deviceId) + ' - Daily Report';
+            
+            if (daily) {
+                document.getElementById('reportDailyStats').innerHTML = 
+                    '<div class="daily-stat-card mileage"><div class="daily-stat-value">' + daily.total_mileage_km.toFixed(2) + '</div><div class="daily-stat-label">Total Mileage (km)</div></div>' +
+                    '<div class="daily-stat-card hours"><div class="daily-stat-value">' + daily.driving_hours.toFixed(2) + '</div><div class="daily-stat-label">Driving Hours</div></div>' +
+                    '<div class="daily-stat-card speed"><div class="daily-stat-value">' + daily.max_speed_kmh + '</div><div class="daily-stat-label">Max Speed (km/h)</div></div>' +
+                    '<div class="daily-stat-card events"><div class="daily-stat-value">' + daily.harsh_events_total + '</div><div class="daily-stat-label">Harsh Events</div></div>';
+            } else {
+                document.getElementById('reportDailyStats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#999;">No daily summary data yet. Waiting for MQTT data...</div>';
             }
             
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vehicle Name</th>
-                            <th>Device ID</th>
-                            <th>Status</th>
-                            <th>Last Update</th>
-                            <th>Assigned Driver</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            document.getElementById('reportDetails').innerHTML = 
+                '<h3 style="margin-bottom:15px;">Vehicle Details</h3>' +
+                '<table><tr><th>Property</th><th>Value</th></tr>' +
+                '<tr><td>Device ID</td><td><code>' + deviceId + '</code></td></tr>' +
+                '<tr><td>Name</td><td>' + (vehicle ? vehicle.name || 'Unnamed' : 'Unknown') + '</td></tr>' +
+                '<tr><td>Assigned Driver</td><td>' + (driver ? driver.name : 'Unassigned') + '</td></tr>' +
+                '<tr><td>Driver License</td><td>' + (driver ? driver.license : '--') + '</td></tr>' +
+                '<tr><td>Driver Phone</td><td>' + (driver ? driver.phone : '--') + '</td></tr>' +
+                '<tr><td>Depot</td><td>' + (driver ? driver.depot : '--') + '</td></tr>' +
+                '<tr><td>Date</td><td>' + (daily ? daily.date : '--') + '</td></tr>' +
+                '<tr><td>Harsh Acceleration</td><td>' + (daily ? daily.harsh_accel_count : '--') + '</td></tr>' +
+                '<tr><td>Harsh Braking</td><td>' + (daily ? daily.harsh_brake_count : '--') + '</td></tr>' +
+                '<tr><td>Last MQTT Update</td><td>' + (daily ? daily.timestamp : '--') + '</td></tr>' +
+                '</table>';
             
-            vehicleData.forEach(vehicle => {
-                const driver = drivers.find(d => d.vehicleId === vehicle.id.toString());
-                html += `
-                    <tr>
-                        <td><strong>${vehicle.name || 'Unnamed Vehicle'}</strong></td>
-                        <td><code>${vehicle.id}</code></td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>${new Date().toLocaleString()}</td>
-                        <td>${driver ? driver.name : '<span style="color:#999;">Unassigned</span>'}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="assignDriver('${vehicle.id}', '${vehicle.name || 'Unnamed'}')">
-                                <i class="fas fa-user-plus"></i> Assign
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            return html;
+            document.getElementById('vehicleReportModal').classList.add('show');
         }
-        
-        // Update statistics
+
+        function closeReport() {
+            document.getElementById('vehicleReportModal').classList.remove('show');
+        }
+
         function updateStats() {
             document.getElementById('totalVehicles').textContent = vehicleData.length;
             document.getElementById('activeVehicles').textContent = vehicleData.length;
@@ -863,1301 +382,82 @@
             document.getElementById('cardDrivers').textContent = drivers.length;
             document.getElementById('cardMaintenance').textContent = maintenanceRecords.length;
             
-            const totalKm = mileageLogs.reduce((sum, log) => sum + (parseFloat(log.distance) || 0), 0);
+            let totalKm = 0;
+            Object.values(dailySummaries).forEach(d => { totalKm += d.total_mileage_km || 0; });
             document.getElementById('totalDistance').textContent = totalKm.toFixed(1) + ' km';
         }
-        
-        // Load drivers from storage
+
         function loadDrivers() {
-            const tableDiv = document.getElementById('driversTable');
-            
-            if (drivers.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No drivers assigned yet. Click "Assign Driver" to add one.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Driver Name</th>
-                            <th>License Number</th>
-                            <th>Phone</th>
-                            <th>Assigned Vehicle</th>
-                            <th>Depot</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            drivers.forEach((driver, index) => {
-                const vehicle = vehicleData.find(v => v.id.toString() === driver.vehicleId);
-                html += `
-                    <tr>
-                        <td><strong>${driver.name}</strong></td>
-                        <td>${driver.license}</td>
-                        <td>${driver.phone}</td>
-                        <td>${vehicle ? vehicle.name : 'Unknown'}</td>
-                        <td>${driver.depot}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="removeDriver(${index})">
-                                <i class="fas fa-trash"></i> Remove
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
+            const d = document.getElementById('driversTable');
+            if (drivers.length === 0) { d.innerHTML = '<div class="loading"><p>No drivers assigned yet.</p></div>'; return; }
+            let h = '<table><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th>Action</th></tr></thead><tbody>';
+            drivers.forEach((dr, i) => { const v = vehicleData.find(x => x.id.toString() === dr.vehicleId); h += '<tr><td><strong>' + dr.name + '</strong></td><td>' + dr.license + '</td><td>' + dr.phone + '</td><td>' + (v ? v.name : 'Unknown') + '</td><td>' + dr.depot + '</td><td><button class="btn btn-secondary" onclick="removeDriver(' + i + ')"><i class="fas fa-trash"></i></button></td></tr>'; });
+            h += '</tbody></table>'; d.innerHTML = h;
         }
-        
-        // Assign driver
-        function assignDriver(vehicleId, vehicleName) {
-            const name = prompt('Enter driver name:');
-            if (!name) return;
-            
-            const license = prompt('Enter license number:');
-            if (!license) return;
-            
-            const phone = prompt('Enter phone number:');
-            if (!phone) return;
-            
-            const depot = prompt('Enter depot (Harare Central, Bulawayo Depot, Mutare Branch):');
-            if (!depot) return;
-            
-            drivers.push({
-                name,
-                license,
-                phone,
-                vehicleId: vehicleId.toString(),
-                depot,
-                assignedDate: new Date().toISOString()
-            });
-            
+
+        function assignDriver(vid, vname) {
+            const n = prompt('Driver name:'); if (!n) return;
+            const l = prompt('License:'); if (!l) return;
+            const p = prompt('Phone:'); if (!p) return;
+            const dp = prompt('Depot (Harare Central, Bulawayo, Mutare):'); if (!dp) return;
+            drivers.push({ name: n, license: l, phone: p, vehicleId: vid.toString(), depot: dp });
             localStorage.setItem('as_drivers', JSON.stringify(drivers));
-            loadDrivers();
-            updateVehicleTables();
-            updateStats();
+            loadDrivers(); updateVehicleTables(); updateStats();
         }
-        
-        // Remove driver
-        function removeDriver(index) {
-            if (confirm('Are you sure you want to remove this driver?')) {
-                drivers.splice(index, 1);
-                localStorage.setItem('as_drivers', JSON.stringify(drivers));
-                loadDrivers();
-                updateVehicleTables();
-                updateStats();
-            }
-        }
-        
-        // Load maintenance records
+
+        function removeDriver(i) { if (confirm('Remove driver?')) { drivers.splice(i, 1); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateStats(); } }
+
         function loadMaintenance() {
-            const tableDiv = document.getElementById('maintenanceTable');
-            
-            if (maintenanceRecords.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No maintenance records yet. Click "Schedule Service" to add one.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vehicle</th>
-                            <th>Service Type</th>
-                            <th>Date</th>
-                            <th>Mileage</th>
-                            <th>Cost</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            maintenanceRecords.forEach(record => {
-                html += `
-                    <tr>
-                        <td><strong>${record.vehicleName}</strong></td>
-                        <td>${record.type}</td>
-                        <td>${record.date}</td>
-                        <td>${record.mileage} km</td>
-                        <td>$${record.cost}</td>
-                        <td><span class="status-badge ${record.status === 'Completed' ? 'status-active' : 'status-idle'}">${record.status}</span></td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
+            const d = document.getElementById('maintenanceTable');
+            if (maintenanceRecords.length === 0) { d.innerHTML = '<div class="loading"><p>No maintenance records yet.</p></div>'; return; }
+            let h = '<table><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>';
+            maintenanceRecords.forEach(r => h += '<tr><td><strong>' + r.vehicleName + '</strong></td><td>' + r.type + '</td><td>' + r.date + '</td><td>' + r.mileage + ' km</td><td>$' + r.cost + '</td><td><span class="status-badge ' + (r.status === 'Completed' ? 'status-active' : 'status-idle') + '">' + r.status + '</span></td></tr>');
+            h += '</tbody></table>'; d.innerHTML = h;
         }
-        
-        // Add maintenance record
+
         function showAddMaintenanceForm() {
-            const vehicleName = prompt('Enter vehicle name:');
-            if (!vehicleName) return;
-            
-            const type = prompt('Service type (Oil Change, Tire Rotation, Brake Service, etc.):');
-            if (!type) return;
-            
-            const date = prompt('Date (YYYY-MM-DD):');
-            if (!date) return;
-            
-            const mileage = prompt('Mileage at service:');
-            if (!mileage) return;
-            
-            const cost = prompt('Cost (USD):');
-            if (!cost) return;
-            
-            maintenanceRecords.push({
-                vehicleName,
-                type,
-                date,
-                mileage,
-                cost,
-                status: 'Scheduled'
-            });
-            
+            const v = prompt('Vehicle:'); if (!v) return;
+            const t = prompt('Service type:'); if (!t) return;
+            const dt = prompt('Date (YYYY-MM-DD):'); if (!dt) return;
+            const m = prompt('Mileage:'); if (!m) return;
+            const c = prompt('Cost USD:'); if (!c) return;
+            maintenanceRecords.push({ vehicleName: v, type: t, date: dt, mileage: m, cost: c, status: 'Scheduled' });
             localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords));
-            loadMaintenance();
-            updateStats();
+            loadMaintenance(); updateStats();
         }
-        
-        // Load mileage logs
+
         function loadMileage() {
-            const tableDiv = document.getElementById('mileageTable');
-            
-            if (mileageLogs.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No trips logged yet. Click "Log Trip" to record one.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Vehicle</th>
-                            <th>Driver</th>
-                            <th>Start Location</th>
-                            <th>End Location</th>
-                            <th>Distance (km)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            mileageLogs.forEach(log => {
-                html += `
-                    <tr>
-                        <td>${log.date}</td>
-                        <td><strong>${log.vehicleName}</strong></td>
-                        <td>${log.driverName}</td>
-                        <td>${log.startLocation}</td>
-                        <td>${log.endLocation}</td>
-                        <td><strong>${log.distance} km</strong></td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
+            const d = document.getElementById('mileageTable');
+            if (mileageLogs.length === 0) { d.innerHTML = '<div class="loading"><p>No trips logged yet.</p></div>'; return; }
+            let h = '<table><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Distance</th></tr></thead><tbody>';
+            mileageLogs.forEach(l => h += '<tr><td>' + l.date + '</td><td><strong>' + l.vehicleName + '</strong></td><td>' + l.driverName + '</td><td>' + l.startLocation + '</td><td>' + l.endLocation + '</td><td><strong>' + l.distance + ' km</strong></td></tr>');
+            h += '</tbody></table>'; d.innerHTML = h;
         }
-        
-        // Add mileage log
+
         function showAddMileageForm() {
-            const vehicleName = prompt('Enter vehicle name:');
-            if (!vehicleName) return;
-            
-            const driverName = prompt('Enter driver name:');
-            if (!driverName) return;
-            
-            const startLocation = prompt('Start location:');
-            if (!startLocation) return;
-            
-            const endLocation = prompt('End location:');
-            if (!endLocation) return;
-            
-            const distance = prompt('Distance (km):');
-            if (!distance) return;
-            
-            mileageLogs.push({
-                date: new Date().toLocaleDateString(),
-                vehicleName,
-                driverName,
-                startLocation,
-                endLocation,
-                distance
-            });
-            
+            const v = prompt('Vehicle:'); if (!v) return;
+            const dr = prompt('Driver:'); if (!dr) return;
+            const s = prompt('From:'); if (!s) return;
+            const e = prompt('To:'); if (!e) return;
+            const dist = prompt('Distance (km):'); if (!dist) return;
+            mileageLogs.push({ date: new Date().toLocaleDateString(), vehicleName: v, driverName: dr, startLocation: s, endLocation: e, distance: dist });
             localStorage.setItem('as_mileage', JSON.stringify(mileageLogs));
-            loadMileage();
-            updateStats();
+            loadMileage(); updateStats();
         }
-        
-        // Page navigation
-        function showPage(pageName) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-            
-            // Remove active from all nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Show selected page
-            document.getElementById(pageName + '-page').classList.add('active');
-            
-            // Activate clicked nav item
+
+        function showPage(name) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(name + '-page').classList.add('active');
             event.target.closest('.nav-item').classList.add('active');
-            
-            // Refresh data if needed
-            if (pageName === 'vehicles') loadVehicles();
-            if (pageName === 'drivers') loadDrivers();
-            if (pageName === 'maintenance') loadMaintenance();
-            if (pageName === 'mileage') loadMileage();
         }
-        
-        // Initialize on page load
+
+        // Close modal on outside click
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'vehicleReportModal') closeReport();
+        });
+
         window.onload = init;
-    </script>
-</body>
-</html>            right: 0;
-            z-index: 1000;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .logo i {
-            font-size: 32px;
-            color: #e94560;
-        }
-        
-        .logo h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-        
-        .logo span {
-            color: #e94560;
-        }
-        
-        .header-stats {
-            display: flex;
-            gap: 30px;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
-            color: #e94560;
-        }
-        
-        .stat-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #aaa;
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: 250px;
-            height: calc(100vh - 70px);
-            background: #1a1a2e;
-            padding: 20px 0;
-            overflow-y: auto;
-        }
-        
-        .nav-item {
-            padding: 14px 25px;
-            color: #aaa;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-            font-size: 14px;
-        }
-        
-        .nav-item:hover, .nav-item.active {
-            background: rgba(233, 69, 96, 0.1);
-            color: white;
-            border-left-color: #e94560;
-        }
-        
-        .nav-item i {
-            width: 20px;
-            text-align: center;
-        }
-        
-        /* Main Content */
-        .main-content {
-            margin-left: 250px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-        
-        /* Dashboard Cards */
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        .card-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-        
-        .card-icon.vehicles { background: #e3f2fd; color: #1976d2; }
-        .card-icon.drivers { background: #e8f5e9; color: #388e3c; }
-        .card-icon.depots { background: #fff3e0; color: #f57c00; }
-        .card-icon.maintenance { background: #fce4ec; color: #c62828; }
-        
-        .card-info h3 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        
-        .card-info p {
-            color: #777;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        /* Map Section */
-        .map-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .section-header h2 {
-            font-size: 18px;
-            color: #1a1a2e;
-        }
-        
-        .refresh-btn {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background 0.3s;
-        }
-        
-        .refresh-btn:hover {
-            background: #c73a54;
-        }
-        
-        #map {
-            height: 450px;
-            border-radius: 8px;
-        }
-        
-        /* Vehicle Table */
-        .table-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th {
-            background: #f8f9fa;
-            padding: 14px 15px;
-            text-align: left;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #666;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        td {
-            padding: 14px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
-        
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .status-active {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .status-idle {
-            background: #fff3e0;
-            color: #e65100;
-        }
-        
-        .status-offline {
-            background: #fce4ec;
-            color: #c62828;
-        }
-        
-        /* Pages */
-        .page {
-            display: none;
-        }
-        
-        .page.active {
-            display: block;
-        }
-        
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #555;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary {
-            background: #e94560;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #c73a54;
-        }
-        
-        .btn-secondary {
-            background: #f0f2f5;
-            color: #333;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #777;
-        }
-        
-        .loading i {
-            font-size: 40px;
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 60px;
-            }
-            .nav-item span {
-                display: none;
-            }
-            .main-content {
-                margin-left: 60px;
-            }
-            .header-stats {
-                display: none;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <div class="logo">
-            <i class="fas fa-shield-haltered"></i>
-            <h1>AUTOMOTIVE <span>SENTINEL</span></h1>
-        </div>
-        <div class="header-stats">
-            <div class="stat-item">
-                <div class="stat-value" id="totalVehicles">0</div>
-                <div class="stat-label">Vehicles</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="activeVehicles">0</div>
-                <div class="stat-label">Active</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="totalDistance">0 km</div>
-                <div class="stat-label">Today's Distance</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="nav-item active" onclick="showPage('dashboard')">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </div>
-        <div class="nav-item" onclick="showPage('vehicles')">
-            <i class="fas fa-truck"></i>
-            <span>Vehicles</span>
-        </div>
-        <div class="nav-item" onclick="showPage('drivers')">
-            <i class="fas fa-users"></i>
-            <span>Drivers</span>
-        </div>
-        <div class="nav-item" onclick="showPage('depots')">
-            <i class="fas fa-warehouse"></i>
-            <span>Depots</span>
-        </div>
-        <div class="nav-item" onclick="showPage('maintenance')">
-            <i class="fas fa-tools"></i>
-            <span>Maintenance</span>
-        </div>
-        <div class="nav-item" onclick="showPage('mileage')">
-            <i class="fas fa-road"></i>
-            <span>Mileage Log</span>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Dashboard Page -->
-        <div class="page active" id="dashboard-page">
-            <div class="dashboard-cards">
-                <div class="card">
-                    <div class="card-icon vehicles">
-                        <i class="fas fa-truck"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardVehicles">0</h3>
-                        <p>Total Vehicles</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon drivers">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardDrivers">0</h3>
-                        <p>Assigned Drivers</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon depots">
-                        <i class="fas fa-warehouse"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardDepots">3</h3>
-                        <p>Active Depots</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon maintenance">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3 id="cardMaintenance">0</h3>
-                        <p>Due Maintenance</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="map-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-map-marker-alt"></i> Live Fleet Tracking</h2>
-                    <button class="refresh-btn" onclick="refreshMap()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-                <div id="map"></div>
-            </div>
-            
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-list"></i> Recent Vehicle Activity</h2>
-                </div>
-                <div id="recentActivity">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading vehicle data...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Vehicles Page -->
-        <div class="page" id="vehicles-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-truck"></i> All Vehicles</h2>
-                    <button class="refresh-btn" onclick="loadVehicles()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-                <div id="vehiclesTable"></div>
-            </div>
-        </div>
-
-        <!-- Drivers Page -->
-        <div class="page" id="drivers-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-users"></i> Driver Assignments</h2>
-                    <button class="btn btn-primary" onclick="showAddDriverForm()">
-                        <i class="fas fa-plus"></i> Assign Driver
-                    </button>
-                </div>
-                <div id="driversTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading driver data...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Depots Page -->
-        <div class="page" id="depots-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-warehouse"></i> Depot Locations</h2>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Depot Name</th>
-                            <th>Location</th>
-                            <th>Vehicles Assigned</th>
-                            <th>Contact</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Harare Central</td>
-                            <td>-17.8252, 31.0335</td>
-                            <td>12</td>
-                            <td>+263 242 123456</td>
-                        </tr>
-                        <tr>
-                            <td>Bulawayo Depot</td>
-                            <td>-20.1457, 28.5873</td>
-                            <td>8</td>
-                            <td>+263 292 654321</td>
-                        </tr>
-                        <tr>
-                            <td>Mutare Branch</td>
-                            <td>-18.9758, 32.6695</td>
-                            <td>5</td>
-                            <td>+263 202 789012</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Maintenance Page -->
-        <div class="page" id="maintenance-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-tools"></i> Maintenance Schedule</h2>
-                    <button class="btn btn-primary" onclick="showAddMaintenanceForm()">
-                        <i class="fas fa-plus"></i> Schedule Service
-                    </button>
-                </div>
-                <div id="maintenanceTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading maintenance records...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mileage Page -->
-        <div class="page" id="mileage-page">
-            <div class="table-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-road"></i> Mileage Log</h2>
-                    <button class="btn btn-primary" onclick="showAddMileageForm()">
-                        <i class="fas fa-plus"></i> Log Trip
-                    </button>
-                </div>
-                <div id="mileageTable">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading mileage data...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Leaflet JS for Maps -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Main Application Script -->
-    <script>
-        // Configuration
-        const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
-        const API_BASE = 'https://flespi.io/gw';
-        
-        // Initialize map
-        let map;
-        let markers = [];
-        let vehicleData = [];
-        let drivers = JSON.parse(localStorage.getItem('as_drivers') || '[]');
-        let maintenanceRecords = JSON.parse(localStorage.getItem('as_maintenance') || '[]');
-        let mileageLogs = JSON.parse(localStorage.getItem('as_mileage') || '[]');
-        
-        // Initialize application
-        function init() {
-            initMap();
-            loadVehicleData();
-            loadDrivers();
-            loadMaintenance();
-            loadMileage();
-            updateStats();
-        }
-        
-        // Initialize Map
-        function initMap() {
-            map = L.map('map').setView([-17.8252, 31.0335], 7); // Centered on Zimbabwe
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(map);
-            
-            // Add depot markers
-            const depots = [
-                { name: 'Harare Central', lat: -17.8252, lng: 31.0335 },
-                { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 },
-                { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }
-            ];
-            
-            depots.forEach(depot => {
-                L.marker([depot.lat, depot.lng], {
-                    icon: L.divIcon({
-                        className: 'depot-marker',
-                        html: '<i class="fas fa-warehouse" style="font-size: 24px; color: #e94560;"></i>',
-                        iconSize: [30, 30]
-                    })
-                }).addTo(map).bindPopup(`<b>${depot.name}</b><br>Depot Location`);
-            });
-        }
-        
-        // Load vehicle data from flespi
-        async function loadVehicleData() {
-            try {
-                const response = await fetch(`${API_BASE}/devices/all`, {
-                    headers: {
-                        'Authorization': `FlespiToken ${FLESPI_TOKEN}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to fetch devices');
-                }
-                
-                const data = await response.json();
-                vehicleData = data.result || [];
-                
-                updateMap();
-                updateVehicleTable();
-                updateRecentActivity();
-                updateStats();
-            } catch (error) {
-                console.error('Error loading vehicles:', error);
-                showError('vehiclesTable', 'Unable to load vehicles. Please check your connection and token.');
-            }
-        }
-        
-        // Update map with vehicle markers
-        function updateMap() {
-            // Clear existing markers
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            
-            vehicleData.forEach(async (vehicle) => {
-                try {
-                    const response = await fetch(`${API_BASE}/devices/${vehicle.id}/messages`, {
-                        headers: {
-                            'Authorization': `FlespiToken ${FLESPI_TOKEN}`
-                        }
-                    });
-                    
-                    const msgData = await response.json();
-                    if (msgData.result && msgData.result.length > 0) {
-                        const lastMsg = msgData.result[msgData.result.length - 1];
-                        const lat = lastMsg['position.latitude'];
-                        const lng = lastMsg['position.longitude'];
-                        const speed = lastMsg['position.speed'] || 0;
-                        
-                        if (lat && lng) {
-                            const marker = L.marker([lat, lng])
-                                .addTo(map)
-                                .bindPopup(`
-                                    <b>${vehicle.name || 'Vehicle ' + vehicle.id}</b><br>
-                                    Speed: ${speed} km/h<br>
-                                    <small>ID: ${vehicle.id}</small>
-                                `);
-                            markers.push(marker);
-                        }
-                    }
-                } catch (err) {
-                    console.log(`No location for ${vehicle.name}`);
-                }
-            });
-        }
-        
-        // Refresh map
-        function refreshMap() {
-            updateMap();
-            updateRecentActivity();
-            updateStats();
-        }
-        
-        // Update vehicle table
-        function updateVehicleTable() {
-            const tableDiv = document.getElementById('vehiclesTable');
-            
-            if (vehicleData.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No vehicles found in your flespi account.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vehicle Name</th>
-                            <th>Device ID</th>
-                            <th>Status</th>
-                            <th>Last Update</th>
-                            <th>Driver</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            vehicleData.forEach(vehicle => {
-                const driver = drivers.find(d => d.vehicleId === vehicle.id.toString());
-                html += `
-                    <tr>
-                        <td><strong>${vehicle.name || 'Unnamed Vehicle'}</strong></td>
-                        <td>${vehicle.id}</td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>${new Date().toLocaleString()}</td>
-                        <td>${driver ? driver.name : 'Unassigned'}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="assignDriver('${vehicle.id}', '${vehicle.name}')">
-                                <i class="fas fa-user-plus"></i> Assign
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
-        }
-        
-        // Update recent activity
-        function updateRecentActivity() {
-            const activityDiv = document.getElementById('recentActivity');
-            
-            if (vehicleData.length === 0) {
-                activityDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No recent activity. Add devices to your flespi account.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vehicle</th>
-                            <th>Status</th>
-                            <th>Location</th>
-                            <th>Speed</th>
-                            <th>Timestamp</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            vehicleData.slice(0, 10).forEach(vehicle => {
-                html += `
-                    <tr>
-                        <td><strong>${vehicle.name || 'Vehicle ' + vehicle.id}</strong></td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>Tracking...</td>
-                        <td>-- km/h</td>
-                        <td>${new Date().toLocaleTimeString()}</td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            activityDiv.innerHTML = html;
-        }
-        
-        // Update statistics
-        function updateStats() {
-            document.getElementById('totalVehicles').textContent = vehicleData.length;
-            document.getElementById('activeVehicles').textContent = vehicleData.length;
-            document.getElementById('cardVehicles').textContent = vehicleData.length;
-            document.getElementById('cardDrivers').textContent = drivers.length;
-            document.getElementById('cardMaintenance').textContent = maintenanceRecords.length;
-            
-            // Calculate total mileage
-            const totalKm = mileageLogs.reduce((sum, log) => sum + (parseFloat(log.distance) || 0), 0);
-            document.getElementById('totalDistance').textContent = totalKm.toFixed(1) + ' km';
-        }
-        
-        // Load drivers from storage
-        function loadDrivers() {
-            const tableDiv = document.getElementById('driversTable');
-            
-            if (drivers.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No drivers assigned yet.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Driver Name</th>
-                            <th>License Number</th>
-                            <th>Phone</th>
-                            <th>Assigned Vehicle</th>
-                            <th>Depot</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            drivers.forEach((driver, index) => {
-                const vehicle = vehicleData.find(v => v.id.toString() === driver.vehicleId);
-                html += `
-                    <tr>
-                        <td><strong>${driver.name}</strong></td>
-                        <td>${driver.license}</td>
-                        <td>${driver.phone}</td>
-                        <td>${vehicle ? vehicle.name : 'Unknown'}</td>
-                        <td>${driver.depot}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="removeDriver(${index})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
-        }
-        
-        // Assign driver
-        function assignDriver(vehicleId, vehicleName) {
-            const name = prompt('Enter driver name:');
-            if (!name) return;
-            
-            const license = prompt('Enter license number:');
-            if (!license) return;
-            
-            const phone = prompt('Enter phone number:');
-            if (!phone) return;
-            
-            const depot = prompt('Enter depot (Harare Central, Bulawayo Depot, Mutare Branch):');
-            if (!depot) return;
-            
-            drivers.push({
-                name,
-                license,
-                phone,
-                vehicleId: vehicleId.toString(),
-                depot,
-                assignedDate: new Date().toISOString()
-            });
-            
-            localStorage.setItem('as_drivers', JSON.stringify(drivers));
-            loadDrivers();
-            updateVehicleTable();
-            updateStats();
-        }
-        
-        // Remove driver
-        function removeDriver(index) {
-            if (confirm('Are you sure you want to remove this driver?')) {
-                drivers.splice(index, 1);
-                localStorage.setItem('as_drivers', JSON.stringify(drivers));
-                loadDrivers();
-                updateStats();
-            }
-        }
-        
-        // Load maintenance records
-        function loadMaintenance() {
-            const tableDiv = document.getElementById('maintenanceTable');
-            
-            if (maintenanceRecords.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No maintenance records yet.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vehicle</th>
-                            <th>Service Type</th>
-                            <th>Date</th>
-                            <th>Mileage</th>
-                            <th>Cost</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            maintenanceRecords.forEach(record => {
-                html += `
-                    <tr>
-                        <td><strong>${record.vehicleName}</strong></td>
-                        <td>${record.type}</td>
-                        <td>${record.date}</td>
-                        <td>${record.mileage} km</td>
-                        <td>$${record.cost}</td>
-                        <td><span class="status-badge ${record.status === 'Completed' ? 'status-active' : 'status-idle'}">${record.status}</span></td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
-        }
-        
-        // Add maintenance record
-        function showAddMaintenanceForm() {
-            const vehicleName = prompt('Enter vehicle name:');
-            if (!vehicleName) return;
-            
-            const type = prompt('Service type (Oil Change, Tire Rotation, Brake Service, etc.):');
-            if (!type) return;
-            
-            const date = prompt('Date (YYYY-MM-DD):');
-            if (!date) return;
-            
-            const mileage = prompt('Mileage at service:');
-            if (!mileage) return;
-            
-            const cost = prompt('Cost (USD):');
-            if (!cost) return;
-            
-            maintenanceRecords.push({
-                vehicleName,
-                type,
-                date,
-                mileage,
-                cost,
-                status: 'Scheduled'
-            });
-            
-            localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords));
-            loadMaintenance();
-            updateStats();
-        }
-        
-        // Load mileage logs
-        function loadMileage() {
-            const tableDiv = document.getElementById('mileageTable');
-            
-            if (mileageLogs.length === 0) {
-                tableDiv.innerHTML = '<div class="loading"><i class="fas fa-info-circle"></i><p>No trips logged yet.</p></div>';
-                return;
-            }
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Vehicle</th>
-                            <th>Driver</th>
-                            <th>Start Location</th>
-                            <th>End Location</th>
-                            <th>Distance (km)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            mileageLogs.forEach(log => {
-                html += `
-                    <tr>
-                        <td>${log.date}</td>
-                        <td><strong>${log.vehicleName}</strong></td>
-                        <td>${log.driverName}</td>
-                        <td>${log.startLocation}</td>
-                        <td>${log.endLocation}</td>
-                        <td>${log.distance} km</td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            tableDiv.innerHTML = html;
-        }
-        
-        // Add mileage log
-        function showAddMileageForm() {
-            const vehicleName = prompt('Enter vehicle name:');
-            if (!vehicleName) return;
-            
-            const driverName = prompt('Enter driver name:');
-            if (!driverName) return;
-            
-            const startLocation = prompt('Start location:');
-            if (!startLocation) return;
-            
-            const endLocation = prompt('End location:');
-            if (!endLocation) return;
-            
-            const distance = prompt('Distance (km):');
-            if (!distance) return;
-            
-            mileageLogs.push({
-                date: new Date().toLocaleDateString(),
-                vehicleName,
-                driverName,
-                startLocation,
-                endLocation,
-                distance
-            });
-            
-            localStorage.setItem('as_mileage', JSON.stringify(mileageLogs));
-            loadMileage();
-            updateStats();
-        }
-        
-        // Page navigation
-        function showPage(pageName) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-            
-            // Remove active from all nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Show selected page
-            document.getElementById(pageName + '-page').classList.add('active');
-            
-            // Activate clicked nav item
-            event.target.closest('.nav-item').classList.add('active');
-            
-            // Refresh data if needed
-            if (pageName === 'vehicles') loadVehicleData();
-            if (pageName === 'drivers') loadDrivers();
-            if (pageName === 'maintenance') loadMaintenance();
-            if (pageName === 'mileage') loadMileage();
-        }
-        
-        // Error display
-        function showError(elementId, message) {
-            document.getElementById(elementId).innerHTML = `
-                <div class="loading">
-                    <i class="fas fa-exclamation-triangle" style="color: #e94560;"></i>
-                    <p>${message}</p>
-                </div>
-            `;
-        }
-        
-        // Initialize on page load
-        window.onload = init;
-        
-        // Auto-refresh every 60 seconds
-        setInterval(() => {
-            loadVehicleData();
-        }, 60000);
     </script>
 </body>
 </html>
