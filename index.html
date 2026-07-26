@@ -7,18 +7,20 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
     <style>
         :root {
             --bg: #f0f2f5; --surface: #ffffff; --text: #333333; --text-secondary: #777777;
             --border: #e0e0e0; --header-bg: linear-gradient(135deg, #1a1a2e, #16213e);
             --sidebar-bg: #1a1a2e; --table-header: #f8f9fa; --table-row-hover: #f8f9fa;
-            --shadow: 0 2px 10px rgba(0,0,0,0.08); --input-bg: #ffffff; --input-border: #ddd;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
         .dark-theme {
             --bg: #0f0f1a; --surface: #1a1a2e; --text: #e0e0e0; --text-secondary: #999999;
             --border: #2a2a4a; --header-bg: linear-gradient(135deg, #0a0a15, #12122a);
             --sidebar-bg: #0a0a15; --table-header: #1a1a30; --table-row-hover: #1a1a30;
-            --shadow: 0 2px 10px rgba(0,0,0,0.3); --input-bg: #1a1a30; --input-border: #2a2a4a;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); transition: all 0.3s; }
@@ -67,7 +69,6 @@
         .status-badge { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; white-space: nowrap; }
         .status-active { background: #e8f5e9; color: #2e7d32; }
         .status-idle { background: #fff3e0; color: #e65100; }
-        .status-warning { background: #fce4ec; color: #c62828; }
         .page { display: none; }
         .page.active { display: block; }
         .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -82,8 +83,6 @@
         .daily-stat-card.speed { background: linear-gradient(135deg, #f093fb, #f5576c); }
         .daily-stat-card.hours { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #1a1a2e; }
         .daily-stat-card.events { background: linear-gradient(135deg, #fa709a, #fee140); color: #1a1a2e; }
-        .daily-stat-card.signal { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #1a1a2e; }
-        .daily-stat-card.accel { background: linear-gradient(135deg, #667eea, #764ba2); }
         .daily-stat-value { font-size: 26px; font-weight: 700; }
         .daily-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-top: 3px; }
         .driver-behavior-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
@@ -92,10 +91,8 @@
         .behavior-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
         .signal-bar { height: 6px; border-radius: 3px; margin-top: 5px; background: #e0e0e0; overflow: hidden; }
         .signal-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
-        .signal-fill.excellent { background: #4caf50; }
-        .signal-fill.good { background: #8bc34a; }
-        .signal-fill.fair { background: #ff9800; }
-        .signal-fill.poor { background: #e94560; }
+        .signal-fill.excellent { background: #4caf50; } .signal-fill.good { background: #8bc34a; }
+        .signal-fill.fair { background: #ff9800; } .signal-fill.poor { background: #e94560; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; padding: 15px; }
         .modal.show { display: flex; }
         .modal-content { background: var(--surface); border-radius: 12px; padding: 20px; max-width: 750px; width: 100%; max-height: 85vh; overflow-y: auto; }
@@ -103,6 +100,16 @@
         .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-secondary); }
         .modal-close:hover { color: #e94560; }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 998; }
+        
+        /* 3D Panel Styles */
+        #three-container { width: 100%; height: 450px; border-radius: 8px; border: 1px solid var(--border); background: #111116; }
+        .three-telemetry { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+        .three-telemetry .telemetry-card { background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; box-shadow: var(--shadow); }
+        .three-telemetry .telemetry-value { font-size: 20px; font-weight: 700; color: #e94560; }
+        .three-telemetry .telemetry-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .vehicle-selector { margin-bottom: 15px; }
+        .vehicle-selector select { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; min-width: 200px; }
+        
         @media (max-width: 768px) {
             .hamburger { display: block; }
             .sidebar { transform: translateX(-100%); width: 240px; }
@@ -116,12 +123,12 @@
             .card { padding: 15px; gap: 10px; }
             .card-icon { width: 35px; height: 35px; font-size: 16px; }
             .card-info h3 { font-size: 20px; }
-            #map { height: 300px; }
+            #map, #three-container { height: 300px; }
             .daily-stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 480px) {
             .dashboard-cards { grid-template-columns: 1fr; }
-            #map { height: 250px; }
+            #map, #three-container { height: 250px; }
         }
     </style>
 </head>
@@ -143,10 +150,8 @@
                 <div class="stat-item"><div class="stat-value" id="totalDistance">0</div><div class="stat-label">km</div></div>
             </div>
             <div class="mqtt-indicator"><div class="mqtt-dot" id="mqttDot"></div> <span id="mqttStatus">...</span></div>
-            <button class="map-layer-btn" id="satelliteBtn" onclick="toggleSatellite()" title="Toggle satellite view">🛰️</button>
-            <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark/light theme">
-                <i class="fas fa-moon" id="themeIcon"></i>
-            </button>
+            <button class="map-layer-btn" id="satelliteBtn" onclick="toggleSatellite()" title="Satellite view">🛰️</button>
+            <button class="theme-btn" onclick="toggleTheme()" title="Dark/light theme"><i class="fas fa-moon" id="themeIcon"></i></button>
         </div>
     </div>
 
@@ -158,6 +163,7 @@
         <div class="nav-item" onclick="navigate('maintenance')"><i class="fas fa-tools"></i><span>Maintenance</span></div>
         <div class="nav-item" onclick="navigate('mileage')"><i class="fas fa-road"></i><span>Mileage Log</span></div>
         <div class="nav-item" onclick="navigate('behavior')"><i class="fas fa-gauge-high"></i><span>Driver Behavior</span></div>
+        <div class="nav-item" onclick="navigate('threed')"><i class="fas fa-cube"></i><span>3D Tracker</span></div>
     </div>
 
     <div class="main-content" id="mainContent">
@@ -209,6 +215,26 @@
                 <div class="loading" style="grid-column:1/-1;"><p>Waiting for MQTT telemetry data...</p></div>
             </div>
         </div>
+
+        <!-- 3D Tracker Page -->
+        <div class="page" id="threed-page">
+            <div class="vehicle-selector">
+                <label style="font-weight:600;margin-right:10px;">Select Vehicle:</label>
+                <select id="threeVehicleSelect" onchange="switch3DVehicle()">
+                    <option value="">-- Select a vehicle --</option>
+                </select>
+            </div>
+            <div class="section-header"><h2><i class="fas fa-cube"></i> 3D Vehicle Orientation <span id="threeVehicleName"></span></h2></div>
+            <div id="three-container"></div>
+            <div class="three-telemetry" id="threeTelemetry">
+                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelX">0.00</div><div class="telemetry-label">Accel X (g)</div></div>
+                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelY">0.00</div><div class="telemetry-label">Accel Y (g)</div></div>
+                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelZ">0.00</div><div class="telemetry-label">Accel Z (g)</div></div>
+                <div class="telemetry-card"><div class="telemetry-value" id="threePitch">0.0°</div><div class="telemetry-label">Pitch</div></div>
+                <div class="telemetry-card"><div class="telemetry-value" id="threeRoll">0.0°</div><div class="telemetry-label">Roll</div></div>
+                <div class="telemetry-card"><div class="telemetry-value" id="threeSignal">--</div><div class="telemetry-label">Signal</div></div>
+            </div>
+        </div>
     </div>
 
     <div class="modal" id="vehicleReportModal">
@@ -223,20 +249,26 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // ==================== CONFIGURATION ====================
         const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
         const MQTT_BROKER = 'wss://mqtt.flespi.io:443';
         const API_BASE = 'https://flespi.io/gw';
 
+        // ==================== GLOBAL STATE ====================
         let map, mqttClient, satelliteLayer, standardLayer, isSatellite = false;
         let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
-        let vehicleMetadata = {}, vehicleTelemetry = {}; // deviceId -> { accelX, accelY, accelZ, signal, network }
+        let vehicleMetadata = {}, vehicleTelemetry = {};
         let drivers = JSON.parse(localStorage.getItem('as_drivers') || '[]');
         let maintenanceRecords = JSON.parse(localStorage.getItem('as_maintenance') || '[]');
         let mileageLogs = JSON.parse(localStorage.getItem('as_mileage') || '[]');
+        
+        // 3D State
+        let threeScene, threeCamera, threeRenderer, threeModel;
+        let selected3DVehicle = null;
 
+        // ==================== THEME ====================
         let isDark = localStorage.getItem('as_dark_theme') === 'true';
         if (isDark) { document.body.classList.add('dark-theme'); document.getElementById('themeIcon').className = 'fas fa-sun'; }
-
         function toggleTheme() {
             isDark = !isDark;
             document.body.classList.toggle('dark-theme', isDark);
@@ -244,28 +276,17 @@
             localStorage.setItem('as_dark_theme', isDark);
         }
 
+        // ==================== SATELLITE TOGGLE ====================
         function toggleSatellite() {
             isSatellite = !isSatellite;
             const btn = document.getElementById('satelliteBtn');
-            if (isSatellite) {
-                map.removeLayer(standardLayer);
-                map.addLayer(satelliteLayer);
-                btn.classList.add('active');
-            } else {
-                map.removeLayer(satelliteLayer);
-                map.addLayer(standardLayer);
-                btn.classList.remove('active');
-            }
+            if (isSatellite) { map.removeLayer(standardLayer); map.addLayer(satelliteLayer); btn.classList.add('active'); }
+            else { map.removeLayer(satelliteLayer); map.addLayer(standardLayer); btn.classList.remove('active'); }
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('open');
-        }
-        function closeSidebar() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('sidebarOverlay').classList.remove('open');
-        }
+        // ==================== SIDEBAR ====================
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
         function navigate(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -278,8 +299,10 @@
             if (page === 'maintenance') loadMaintenance();
             if (page === 'mileage') loadMileage();
             if (page === 'behavior') updateBehaviorGrid();
+            if (page === 'threed') init3DScene();
         }
 
+        // ==================== INITIALIZATION ====================
         function init() {
             initMap();
             connectMQTT();
@@ -292,31 +315,158 @@
         function initMap() {
             standardLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 });
             satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
-            
             map = L.map('map').setView([-17.8252, 31.0335], 7);
             standardLayer.addTo(map);
-            
-            const depots = [
-                { name: 'Harare Central', lat: -17.8252, lng: 31.0335 },
-                { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 },
-                { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }
-            ];
-            depots.forEach(d => {
-                L.marker([d.lat, d.lng], {
-                    icon: L.divIcon({
-                        html: '<div style="background:#e94560;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
-                        iconSize: [28,28], iconAnchor: [14,14]
-                    })
-                }).addTo(map).bindPopup('<b>' + d.name + '</b><br>Depot');
+            [{ name: 'Harare Central', lat: -17.8252, lng: 31.0335 }, { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 }, { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }].forEach(d => {
+                L.marker([d.lat, d.lng], { icon: L.divIcon({ html: '<div style="background:#e94560;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>', iconSize: [28,28], iconAnchor: [14,14] }) }).addTo(map).bindPopup('<b>' + d.name + '</b><br>Depot');
             });
         }
 
+        // ==================== 3D SCENE ====================
+        function init3DScene() {
+            if (threeScene) { update3DVehicleSelect(); return; }
+            
+            const container = document.getElementById('three-container');
+            threeScene = new THREE.Scene();
+            threeScene.background = new THREE.Color(0x111116);
+            
+            threeCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            threeCamera.position.set(3, 2.5, 5);
+            threeCamera.lookAt(0, 0, 0);
+            
+            threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+            threeRenderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(threeRenderer.domElement);
+            
+            // Vehicle body
+            const bodyGeo = new THREE.BoxGeometry(2.5, 0.3, 1.5);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3498db, roughness: 0.3, metalness: 0.4 });
+            threeModel = new THREE.Mesh(bodyGeo, bodyMat);
+            threeScene.add(threeModel);
+            
+            // Cabin
+            const cabinGeo = new THREE.BoxGeometry(1.2, 0.25, 1.3);
+            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.2, metalness: 0.3 });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0.3, 0.27, 0);
+            threeModel.add(cabin);
+            
+            // Wheels
+            const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.15, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            [[-0.8, -0.22, 0.75], [0.8, -0.22, 0.75], [-0.8, -0.22, -0.75], [0.8, -0.22, -0.75]].forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(...pos);
+                threeModel.add(wheel);
+            });
+            
+            // Arrow (front indicator)
+            const arrowGeo = new THREE.ConeGeometry(0.15, 0.4, 8);
+            const arrowMat = new THREE.MeshStandardMaterial({ color: 0xe94560 });
+            const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+            arrow.position.set(1.4, 0, 0);
+            arrow.rotation.z = -Math.PI / 2;
+            threeModel.add(arrow);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(8, 20, 0x333333, 0x222222);
+            threeScene.add(gridHelper);
+            
+            // Lighting
+            threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(5, 10, 5);
+            threeScene.add(dirLight);
+            const backLight = new THREE.DirectionalLight(0x4488ff, 0.4);
+            backLight.position.set(-3, 2, -3);
+            threeScene.add(backLight);
+            
+            // Mouse controls
+            let isDragging = false, prevMouse = { x: 0, y: 0 };
+            container.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+            container.addEventListener('mouseup', () => isDragging = false);
+            container.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+                threeModel.rotation.y += dx * 0.005;
+                threeCamera.position.y += dy * 0.02;
+                threeCamera.position.y = Math.max(1, Math.min(8, threeCamera.position.y));
+                threeCamera.lookAt(threeModel.position);
+                prevMouse = { x: e.clientX, y: e.clientY };
+            });
+            container.addEventListener('wheel', e => {
+                threeCamera.position.z += e.deltaY * 0.01;
+                threeCamera.position.z = Math.max(2, Math.min(15, threeCamera.position.z));
+                threeCamera.lookAt(threeModel.position);
+            });
+            
+            window.addEventListener('resize', () => {
+                if (threeCamera && threeRenderer) {
+                    const c = document.getElementById('three-container');
+                    threeCamera.aspect = c.clientWidth / c.clientHeight;
+                    threeCamera.updateProjectionMatrix();
+                    threeRenderer.setSize(c.clientWidth, c.clientHeight);
+                }
+            });
+            
+            function animate3D() {
+                requestAnimationFrame(animate3D);
+                if (threeRenderer && threeScene && threeCamera) threeRenderer.render(threeScene, threeCamera);
+            }
+            animate3D();
+            
+            update3DVehicleSelect();
+        }
+
+        function update3DVehicleSelect() {
+            const select = document.getElementById('threeVehicleSelect');
+            select.innerHTML = '<option value="">-- Select a vehicle --</option>';
+            Object.keys(vehicleMetadata).forEach(id => {
+                const meta = vehicleMetadata[id];
+                select.innerHTML += '<option value="' + id + '">' + (meta.name || 'Vehicle ' + id) + ' (' + id + ')</option>';
+            });
+        }
+
+        function switch3DVehicle() {
+            const id = document.getElementById('threeVehicleSelect').value;
+            selected3DVehicle = id || null;
+            const meta = id ? vehicleMetadata[id] : null;
+            document.getElementById('threeVehicleName').textContent = meta ? ' - ' + (meta.name || 'Vehicle ' + id) : '';
+            update3DTelemetry();
+        }
+
+        function update3DTelemetry() {
+            if (!selected3DVehicle) return;
+            const telem = vehicleTelemetry[selected3DVehicle] || {};
+            const ax = telem.accelX || 0, ay = telem.accelY || 0, az = telem.accelZ || 0;
+            
+            document.getElementById('threeAccelX').textContent = ax.toFixed(3);
+            document.getElementById('threeAccelY').textContent = ay.toFixed(3);
+            document.getElementById('threeAccelZ').textContent = az.toFixed(3);
+            
+            const pitch = Math.atan2(ax, Math.sqrt(ay * ay + az * az));
+            const roll = Math.atan2(ay, Math.max(az, 0.1));
+            
+            document.getElementById('threePitch').textContent = (pitch * (180 / Math.PI)).toFixed(1) + '°';
+            document.getElementById('threeRoll').textContent = (roll * (180 / Math.PI)).toFixed(1) + '°';
+            
+            const sigVal = telem.signal;
+            document.getElementById('threeSignal').textContent = sigVal !== undefined ? (typeof sigVal === 'number' && sigVal <= 100 ? sigVal + '%' : sigVal) : '--';
+            
+            if (threeModel) {
+                threeModel.rotation.x = roll;
+                threeModel.rotation.z = -pitch;
+            }
+        }
+
+        // ==================== FETCH & MQTT ====================
         async function fetchInitialData() {
             try {
                 const resp = await fetch(API_BASE + '/devices/all', { headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN } });
                 const data = await resp.json();
                 (data.result || []).forEach(d => { vehicleMetadata[d.id] = { name: d.name, id: d.id }; });
-                updateStats(); updateVehicleTables();
+                updateStats(); updateVehicleTables(); update3DVehicleSelect();
             } catch (e) { console.error('Fetch error:', e); }
         }
 
@@ -331,11 +481,9 @@
                 setMQTTStatus('connected', '#4caf50');
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position', { qos: 1 });
                 mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last', { qos: 1 });
-                // Accelerometer subscriptions
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.x', { qos: 1 });
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.y', { qos: 1 });
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.z', { qos: 1 });
-                // Signal & network (standardized names + device-specific fallbacks)
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/gsm.signal.level', { qos: 1 });
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/sig', { qos: 1 });
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position.signal', { qos: 1 });
@@ -347,29 +495,20 @@
             mqttClient.on('message', (topic, payload) => {
                 try {
                     const data = JSON.parse(payload.toString());
-                    const parts = topic.split('/');
-                    const deviceId = parts[4];
+                    const parts = topic.split('/'), deviceId = parts[4];
                     const value = data.value !== undefined ? data.value : data;
-                    
-                    if (topic.includes('/telemetry/position') && !topic.includes('signal')) {
-                        handlePosition(deviceId, data);
-                    } else if (topic.includes('/calcs/') && topic.endsWith('/last')) {
-                        handleSummary(parts[6], data);
-                    } else if (topic.includes('acceleration.x')) {
-                        storeTelemetry(deviceId, 'accelX', value);
-                    } else if (topic.includes('acceleration.y')) {
-                        storeTelemetry(deviceId, 'accelY', value);
-                    } else if (topic.includes('acceleration.z')) {
-                        storeTelemetry(deviceId, 'accelZ', value);
-                    } else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
-                        // Store signal — normalize to percentage if needed
-                        let signalVal = value;
-                        if (typeof signalVal === 'number' && signalVal <= 31 && topic.includes('sig')) signalVal = Math.round((signalVal / 31) * 100);
-                        if (typeof signalVal === 'number' && signalVal <= 31 && topic.includes('position.signal')) signalVal = Math.round((signalVal / 31) * 100);
-                        storeTelemetry(deviceId, 'signal', signalVal);
-                    } else if (topic.includes('network.type') || topic.includes('/network') || topic.includes('modem.network_type')) {
-                        storeTelemetry(deviceId, 'network', value);
+                    if (topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
+                    else if (topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
+                    else if (topic.includes('acceleration.x')) storeTelemetry(deviceId, 'accelX', value);
+                    else if (topic.includes('acceleration.y')) storeTelemetry(deviceId, 'accelY', value);
+                    else if (topic.includes('acceleration.z')) storeTelemetry(deviceId, 'accelZ', value);
+                    else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
+                        let sv = value;
+                        if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
+                        storeTelemetry(deviceId, 'signal', sv);
                     }
+                    else if (topic.includes('network.type') || topic.includes('/network') || topic.includes('modem.network_type')) storeTelemetry(deviceId, 'network', value);
+                    if (selected3DVehicle === deviceId) update3DTelemetry();
                 } catch (e) {}
             });
             mqttClient.on('error', () => setMQTTStatus('error', '#e94560'));
@@ -381,33 +520,28 @@
             if (!vehicleTelemetry[deviceId]) vehicleTelemetry[deviceId] = {};
             vehicleTelemetry[deviceId][key] = value;
             updateBehaviorGrid();
+            if (selected3DVehicle === deviceId) update3DTelemetry();
+            if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: 'Vehicle ' + deviceId, id: deviceId }; updateStats(); updateVehicleTables(); update3DVehicleSelect(); }
         }
 
         function setMQTTStatus(status, color) {
             document.getElementById('mqttStatus').textContent = status;
-            const dot = document.getElementById('mqttDot');
-            dot.style.background = color;
+            const dot = document.getElementById('mqttDot'); dot.style.background = color;
             dot.className = 'mqtt-dot' + (status === 'connected' ? ' connected' : '');
         }
 
         function handlePosition(deviceId, data) {
-            const lat = data['position.latitude'] || data.latitude;
-            const lng = data['position.longitude'] || data.longitude;
+            const lat = data['position.latitude'] || data.latitude, lng = data['position.longitude'] || data.longitude;
             if (lat && lng) {
                 vehiclePositions[deviceId] = { lat, lng, speed: data['position.speed'] || data.speed || 0, timestamp: new Date().toLocaleTimeString() };
-                if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: data['device.name'] || ('Vehicle ' + deviceId), id: deviceId }; updateStats(); updateVehicleTables(); }
+                if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: data['device.name'] || ('Vehicle ' + deviceId), id: deviceId }; updateStats(); updateVehicleTables(); update3DVehicleSelect(); }
                 updateMarker(deviceId);
             }
         }
 
         function handleSummary(deviceId, data) {
-            dailySummaries[deviceId] = {
-                total_mileage_km: data.total_mileage_km || 0, driving_hours: data.driving_hours || 0,
-                max_speed_kmh: data.max_speed_kmh || 0, harsh_accel_count: data.harsh_accel_count || 0,
-                harsh_brake_count: data.harsh_brake_count || 0, harsh_events_total: data.harsh_events_total || 0,
-                date: data.date || '', timestamp: new Date().toLocaleTimeString()
-            };
-            if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: 'Vehicle ' + deviceId, id: deviceId }; updateStats(); }
+            dailySummaries[deviceId] = { total_mileage_km: data.total_mileage_km || 0, driving_hours: data.driving_hours || 0, max_speed_kmh: data.max_speed_kmh || 0, harsh_accel_count: data.harsh_accel_count || 0, harsh_brake_count: data.harsh_brake_count || 0, harsh_events_total: data.harsh_events_total || 0, date: data.date || '', timestamp: new Date().toLocaleTimeString() };
+            if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: 'Vehicle ' + deviceId, id: deviceId }; updateStats(); update3DVehicleSelect(); }
             updateVehicleTables(); updateStats();
         }
 
@@ -419,36 +553,19 @@
             if (daily) popup += '<br><small>📅 ' + daily.date + ' | 🛣️ ' + daily.total_mileage_km.toFixed(2) + ' km</small>';
             if (telem.signal !== undefined) popup += '<br><small>📶 Signal: ' + telem.signal + (typeof telem.signal === 'number' && telem.signal <= 100 ? '%' : '') + '</small>';
             popup += '<br><button onclick="showVehicleReport(\'' + deviceId + '\')" style="margin-top:4px;padding:3px 8px;background:#e94560;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">📊 Report</button>';
-            if (vehicleMarkers[deviceId]) {
-                vehicleMarkers[deviceId].setLatLng([pos.lat, pos.lng]).setPopupContent(popup);
-            } else {
-                const icon = L.divIcon({
-                    html: '<div style="display:flex;align-items:center;justify-content:center;"><div style="width:14px;height:14px;background:#1976d2;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div></div>',
-                    iconSize: [20,20], iconAnchor: [10,10], className: ''
-                });
-                vehicleMarkers[deviceId] = L.marker([pos.lat, pos.lng], { icon }).addTo(map).bindPopup(popup);
-            }
+            if (vehicleMarkers[deviceId]) vehicleMarkers[deviceId].setLatLng([pos.lat, pos.lng]).setPopupContent(popup);
+            else vehicleMarkers[deviceId] = L.marker([pos.lat, pos.lng], { icon: L.divIcon({ html: '<div style="display:flex;align-items:center;justify-content:center;"><div style="width:14px;height:14px;background:#1976d2;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div></div>', iconSize: [20,20], iconAnchor: [10,10], className: '' }) }).addTo(map).bindPopup(popup);
         }
 
         function updateVehicleTables() {
             const ids = Object.keys(vehicleMetadata);
-            let h = ids.length === 0 ? '<div class="loading"><p>Waiting for MQTT data...</p></div>' :
-                '<table><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Mileage</th><th>Signal</th><th>Events</th><th>Driver</th><th>Report</th></tr></thead><tbody>';
+            let h = ids.length === 0 ? '<div class="loading"><p>Waiting for MQTT data...</p></div>' : '<table><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Mileage</th><th>Signal</th><th>Events</th><th>Driver</th><th>Report</th></tr></thead><tbody>';
             ids.forEach(id => {
                 const meta = vehicleMetadata[id], daily = dailySummaries[id], pos = vehiclePositions[id], telem = vehicleTelemetry[id] || {};
                 const dr = drivers.find(d => d.vehicleId === id.toString());
-                const sigVal = telem.signal;
-                let sigDisplay = '--';
-                if (sigVal !== undefined) {
-                    const pct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : (typeof sigVal === 'number' ? Math.round((sigVal/31)*100) : sigVal);
-                    sigDisplay = pct + (typeof pct === 'number' ? '%' : '');
-                }
-                h += '<tr><td><strong>' + (meta.name || 'Vehicle ' + id) + '</strong></td><td><code>' + id + '</code></td><td>' +
-                    (pos ? '<span class="status-badge status-active">Live</span>' : '<span class="status-badge status-idle">--</span>') + '</td><td>' +
-                    (daily ? daily.total_mileage_km.toFixed(2) + ' km' : '--') + '</td><td>' + sigDisplay + '</td><td>' +
-                    (daily ? daily.harsh_events_total : '--') + '</td><td>' +
-                    (dr ? dr.name : '<span style="color:var(--text-secondary);">Unassigned</span>') + '</td><td>' +
-                    '<button class="btn btn-primary btn-sm" onclick="showVehicleReport(\'' + id + '\')">📊</button></td></tr>';
+                const sigVal = telem.signal; let sigDisplay = '--';
+                if (sigVal !== undefined) sigDisplay = (typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100)) + '%';
+                h += '<tr><td><strong>' + (meta.name || 'Vehicle ' + id) + '</strong></td><td><code>' + id + '</code></td><td>' + (pos ? '<span class="status-badge status-active">Live</span>' : '<span class="status-badge status-idle">--</span>') + '</td><td>' + (daily ? daily.total_mileage_km.toFixed(2) + ' km' : '--') + '</td><td>' + sigDisplay + '</td><td>' + (daily ? daily.harsh_events_total : '--') + '</td><td>' + (dr ? dr.name : '<span style="color:var(--text-secondary);">Unassigned</span>') + '</td><td><button class="btn btn-primary btn-sm" onclick="showVehicleReport(\'' + id + '\')">📊</button></td></tr>';
             });
             if (ids.length) h += '</tbody></table>';
             document.getElementById('vehiclesTable').innerHTML = h;
@@ -462,23 +579,10 @@
             let html = '';
             ids.forEach(id => {
                 const meta = vehicleMetadata[id], telem = vehicleTelemetry[id] || {};
-                const sigVal = telem.signal;
-                let sigPct = 0, sigLabel = '--';
-                if (sigVal !== undefined) {
-                    sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : (typeof sigVal === 'number' ? Math.round((sigVal/31)*100) : 0);
-                    sigLabel = sigPct + '%';
-                }
+                const sigVal = telem.signal; let sigPct = 0;
+                if (sigVal !== undefined) sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100);
                 let sigClass = sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor';
-                html += '<div class="behavior-card">' +
-                    '<div class="behavior-label">' + (meta.name || 'Vehicle ' + id).substring(0,15) + '</div>' +
-                    '<div class="behavior-value" style="font-size:16px;">📶 ' + sigLabel + '</div>' +
-                    '<div class="signal-bar"><div class="signal-fill ' + sigClass + '" style="width:' + sigPct + '%;"></div></div>' +
-                    '<div style="display:flex;justify-content:space-around;margin-top:8px;font-size:11px;">' +
-                    '<span>X:' + (telem.accelX !== undefined ? telem.accelX.toFixed(2) : '--') + '</span>' +
-                    '<span>Y:' + (telem.accelY !== undefined ? telem.accelY.toFixed(2) : '--') + '</span>' +
-                    '<span>Z:' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(2) : '--') + '</span>' +
-                    '</div><div style="font-size:10px;color:var(--text-secondary);margin-top:3px;">' +
-                    (telem.network || '--') + '</div></div>';
+                html += '<div class="behavior-card"><div class="behavior-label">' + (meta.name || 'Vehicle ' + id).substring(0,15) + '</div><div class="behavior-value" style="font-size:16px;">📶 ' + sigPct + '%</div><div class="signal-bar"><div class="signal-fill ' + sigClass + '" style="width:' + sigPct + '%;"></div></div><div style="display:flex;justify-content:space-around;margin-top:8px;font-size:11px;"><span>X:' + (telem.accelX !== undefined ? telem.accelX.toFixed(2) : '--') + '</span><span>Y:' + (telem.accelY !== undefined ? telem.accelY.toFixed(2) : '--') + '</span><span>Z:' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(2) : '--') + '</span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:3px;">' + (telem.network || '--') + '</div></div>';
             });
             grid.innerHTML = html;
         }
@@ -488,40 +592,12 @@
             const daily = dailySummaries[deviceId], pos = vehiclePositions[deviceId], telem = vehicleTelemetry[deviceId] || {};
             const driver = drivers.find(d => d.vehicleId === deviceId.toString());
             document.getElementById('reportTitle').innerHTML = '<i class="fas fa-chart-bar"></i> ' + (meta.name || 'Vehicle ' + deviceId);
-            
-            if (daily) {
-                document.getElementById('reportDailyStats').innerHTML =
-                    '<div class="daily-stat-card mileage"><div class="daily-stat-value">' + daily.total_mileage_km.toFixed(2) + '</div><div class="daily-stat-label">Mileage (km)</div></div>' +
-                    '<div class="daily-stat-card hours"><div class="daily-stat-value">' + daily.driving_hours.toFixed(2) + '</div><div class="daily-stat-label">Hours</div></div>' +
-                    '<div class="daily-stat-card speed"><div class="daily-stat-value">' + daily.max_speed_kmh + '</div><div class="daily-stat-label">Max Speed</div></div>' +
-                    '<div class="daily-stat-card events"><div class="daily-stat-value">' + daily.harsh_events_total + '</div><div class="daily-stat-label">Harsh Events</div></div>';
-            } else {
-                document.getElementById('reportDailyStats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:15px;color:var(--text-secondary);">⏳ Waiting for MQTT data...</div>';
-            }
-            
-            const sigVal = telem.signal;
-            let sigPct = 0;
-            if (sigVal !== undefined) sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : (typeof sigVal === 'number' ? Math.round((sigVal/31)*100) : 0);
-            let sigClass = sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor';
-            
-            document.getElementById('reportBehavior').innerHTML =
-                '<div class="behavior-card"><div class="behavior-label">Signal</div><div class="behavior-value">📶 ' + (sigVal !== undefined ? sigPct + '%' : '--') + '</div><div class="signal-bar"><div class="signal-fill ' + sigClass + '" style="width:' + sigPct + '%;"></div></div><div style="font-size:10px;color:var(--text-secondary);margin-top:3px;">' + (telem.network || '--') + '</div></div>' +
-                '<div class="behavior-card"><div class="behavior-label">Accel X</div><div class="behavior-value">' + (telem.accelX !== undefined ? telem.accelX.toFixed(3) : '--') + '</div><div class="behavior-label">g-force</div></div>' +
-                '<div class="behavior-card"><div class="behavior-label">Accel Y</div><div class="behavior-value">' + (telem.accelY !== undefined ? telem.accelY.toFixed(3) : '--') + '</div><div class="behavior-label">g-force</div></div>' +
-                '<div class="behavior-card"><div class="behavior-label">Accel Z</div><div class="behavior-value">' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(3) : '--') + '</div><div class="behavior-label">g-force</div></div>';
-            
-            document.getElementById('reportDetails').innerHTML =
-                '<table><tr><th>Property</th><th>Value</th></tr>' +
-                '<tr><td>Device ID</td><td><code>' + deviceId + '</code></td></tr>' +
-                '<tr><td>Speed</td><td>' + (pos ? pos.speed + ' km/h' : '--') + '</td></tr>' +
-                '<tr><td>Driver</td><td>' + (driver ? driver.name : '--') + '</td></tr>' +
-                '<tr><td>License</td><td>' + (driver ? driver.license : '--') + '</td></tr>' +
-                '<tr><td>Phone</td><td>' + (driver ? driver.phone : '--') + '</td></tr>' +
-                '<tr><td>Depot</td><td>' + (driver ? driver.depot : '--') + '</td></tr>' +
-                '<tr><td>Date</td><td>' + (daily ? daily.date : '--') + '</td></tr>' +
-                '<tr><td>Harsh Accel</td><td>' + (daily ? daily.harsh_accel_count : '--') + '</td></tr>' +
-                '<tr><td>Harsh Brake</td><td>' + (daily ? daily.harsh_brake_count : '--') + '</td></tr>' +
-                '<tr><td>Updated</td><td>' + (daily ? daily.timestamp : '--') + '</td></tr></table>';
+            if (daily) document.getElementById('reportDailyStats').innerHTML = '<div class="daily-stat-card mileage"><div class="daily-stat-value">' + daily.total_mileage_km.toFixed(2) + '</div><div class="daily-stat-label">Mileage (km)</div></div><div class="daily-stat-card hours"><div class="daily-stat-value">' + daily.driving_hours.toFixed(2) + '</div><div class="daily-stat-label">Hours</div></div><div class="daily-stat-card speed"><div class="daily-stat-value">' + daily.max_speed_kmh + '</div><div class="daily-stat-label">Max Speed</div></div><div class="daily-stat-card events"><div class="daily-stat-value">' + daily.harsh_events_total + '</div><div class="daily-stat-label">Harsh Events</div></div>';
+            else document.getElementById('reportDailyStats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:15px;">⏳ Waiting for MQTT...</div>';
+            const sigVal = telem.signal; let sigPct = 0;
+            if (sigVal !== undefined) sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100);
+            document.getElementById('reportBehavior').innerHTML = '<div class="behavior-card"><div class="behavior-label">Signal</div><div class="behavior-value">📶 ' + (sigVal !== undefined ? sigPct + '%' : '--') + '</div><div class="signal-bar"><div class="signal-fill ' + (sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor') + '" style="width:' + sigPct + '%;"></div></div></div><div class="behavior-card"><div class="behavior-label">Accel X</div><div class="behavior-value">' + (telem.accelX !== undefined ? telem.accelX.toFixed(3) : '--') + '</div></div><div class="behavior-card"><div class="behavior-label">Accel Y</div><div class="behavior-value">' + (telem.accelY !== undefined ? telem.accelY.toFixed(3) : '--') + '</div></div><div class="behavior-card"><div class="behavior-label">Accel Z</div><div class="behavior-value">' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(3) : '--') + '</div></div>';
+            document.getElementById('reportDetails').innerHTML = '<table><tr><th>Property</th><th>Value</th></tr><tr><td>Device ID</td><td><code>' + deviceId + '</code></td></tr><tr><td>Speed</td><td>' + (pos ? pos.speed + ' km/h' : '--') + '</td></tr><tr><td>Driver</td><td>' + (driver ? driver.name : '--') + '</td></tr><tr><td>Updated</td><td>' + (daily ? daily.timestamp : '--') + '</td></tr></table>';
             document.getElementById('vehicleReportModal').classList.add('show');
         }
         function closeReport() { document.getElementById('vehicleReportModal').classList.remove('show'); }
@@ -537,60 +613,13 @@
             document.getElementById('totalDistance').textContent = km.toFixed(1) + ' km';
         }
 
-        function loadDrivers() {
-            const d = document.getElementById('driversTable');
-            if (!drivers.length) { d.innerHTML = '<div class="loading"><p>No drivers assigned.</p></div>'; return; }
-            let h = '<table><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th></th></tr></thead><tbody>';
-            drivers.forEach((r, i) => { const v = vehicleMetadata[r.vehicleId]; h += '<tr><td><strong>' + r.name + '</strong></td><td>' + r.license + '</td><td>' + r.phone + '</td><td>' + (v ? v.name : '?') + '</td><td>' + r.depot + '</td><td><button class="btn btn-secondary btn-sm" onclick="removeDriver(' + i + ')"><i class="fas fa-trash"></i></button></td></tr>'; });
-            h += '</tbody></table>'; d.innerHTML = h;
-        }
-        function showAddDriverForm() {
-            const n = prompt('Name:'); if (!n) return;
-            const l = prompt('License:'); if (!l) return;
-            const p = prompt('Phone:'); if (!p) return;
-            const vid = prompt('Vehicle Device ID:'); if (!vid) return;
-            const dp = prompt('Depot:'); if (!dp) return;
-            drivers.push({ name: n, license: l, phone: p, vehicleId: vid, depot: dp });
-            localStorage.setItem('as_drivers', JSON.stringify(drivers));
-            loadDrivers(); updateVehicleTables(); updateStats();
-        }
+        function loadDrivers() { const d = document.getElementById('driversTable'); if (!drivers.length) { d.innerHTML = '<div class="loading"><p>No drivers assigned.</p></div>'; return; } let h = '<table><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th></th></tr></thead><tbody>'; drivers.forEach((r, i) => { const v = vehicleMetadata[r.vehicleId]; h += '<tr><td><strong>' + r.name + '</strong></td><td>' + r.license + '</td><td>' + r.phone + '</td><td>' + (v ? v.name : '?') + '</td><td>' + r.depot + '</td><td><button class="btn btn-secondary btn-sm" onclick="removeDriver(' + i + ')"><i class="fas fa-trash"></i></button></td></tr>'; }); h += '</tbody></table>'; d.innerHTML = h; }
+        function showAddDriverForm() { const n = prompt('Name:'); if (!n) return; const l = prompt('License:'); if (!l) return; const p = prompt('Phone:'); if (!p) return; const vid = prompt('Vehicle Device ID:'); if (!vid) return; const dp = prompt('Depot:'); if (!dp) return; drivers.push({ name: n, license: l, phone: p, vehicleId: vid, depot: dp }); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateVehicleTables(); updateStats(); }
         function removeDriver(i) { if (confirm('Remove?')) { drivers.splice(i,1); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateStats(); } }
-
-        function loadMaintenance() {
-            const d = document.getElementById('maintenanceTable');
-            if (!maintenanceRecords.length) { d.innerHTML = '<div class="loading"><p>No records.</p></div>'; return; }
-            let h = '<table><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>';
-            maintenanceRecords.forEach(r => h += '<tr><td>' + r.vehicleName + '</td><td>' + r.type + '</td><td>' + r.date + '</td><td>' + r.mileage + ' km</td><td>$' + r.cost + '</td><td><span class="status-badge ' + (r.status==='Completed'?'status-active':'status-idle') + '">' + r.status + '</span></td></tr>');
-            h += '</tbody></table>'; d.innerHTML = h;
-        }
-        function showAddMaintenanceForm() {
-            const v = prompt('Vehicle:'); if (!v) return;
-            const t = prompt('Service:'); if (!t) return;
-            const dt = prompt('Date (YYYY-MM-DD):'); if (!dt) return;
-            const m = prompt('Mileage:'); if (!m) return;
-            const c = prompt('Cost USD:'); if (!c) return;
-            maintenanceRecords.push({ vehicleName: v, type: t, date: dt, mileage: m, cost: c, status: 'Scheduled' });
-            localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords));
-            loadMaintenance(); updateStats();
-        }
-
-        function loadMileage() {
-            const d = document.getElementById('mileageTable');
-            if (!mileageLogs.length) { d.innerHTML = '<div class="loading"><p>No trips.</p></div>'; return; }
-            let h = '<table><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Dist</th></tr></thead><tbody>';
-            mileageLogs.forEach(l => h += '<tr><td>' + l.date + '</td><td>' + l.vehicleName + '</td><td>' + l.driverName + '</td><td>' + l.startLocation + '</td><td>' + l.endLocation + '</td><td>' + l.distance + ' km</td></tr>');
-            h += '</tbody></table>'; d.innerHTML = h;
-        }
-        function showAddMileageForm() {
-            const v = prompt('Vehicle:'); if (!v) return;
-            const dr = prompt('Driver:'); if (!dr) return;
-            const s = prompt('From:'); if (!s) return;
-            const e = prompt('To:'); if (!e) return;
-            const dist = prompt('Distance (km):'); if (!dist) return;
-            mileageLogs.push({ date: new Date().toLocaleDateString(), vehicleName: v, driverName: dr, startLocation: s, endLocation: e, distance: dist });
-            localStorage.setItem('as_mileage', JSON.stringify(mileageLogs));
-            loadMileage(); updateStats();
-        }
+        function loadMaintenance() { const d = document.getElementById('maintenanceTable'); if (!maintenanceRecords.length) { d.innerHTML = '<div class="loading"><p>No records.</p></div>'; return; } let h = '<table><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>'; maintenanceRecords.forEach(r => h += '<tr><td>' + r.vehicleName + '</td><td>' + r.type + '</td><td>' + r.date + '</td><td>' + r.mileage + ' km</td><td>$' + r.cost + '</td><td><span class="status-badge ' + (r.status==='Completed'?'status-active':'status-idle') + '">' + r.status + '</span></td></tr>'); h += '</tbody></table>'; d.innerHTML = h; }
+        function showAddMaintenanceForm() { const v = prompt('Vehicle:'); if (!v) return; const t = prompt('Service:'); if (!t) return; const dt = prompt('Date (YYYY-MM-DD):'); if (!dt) return; const m = prompt('Mileage:'); if (!m) return; const c = prompt('Cost USD:'); if (!c) return; maintenanceRecords.push({ vehicleName: v, type: t, date: dt, mileage: m, cost: c, status: 'Scheduled' }); localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords)); loadMaintenance(); updateStats(); }
+        function loadMileage() { const d = document.getElementById('mileageTable'); if (!mileageLogs.length) { d.innerHTML = '<div class="loading"><p>No trips.</p></div>'; return; } let h = '<table><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Dist</th></tr></thead><tbody>'; mileageLogs.forEach(l => h += '<tr><td>' + l.date + '</td><td>' + l.vehicleName + '</td><td>' + l.driverName + '</td><td>' + l.startLocation + '</td><td>' + l.endLocation + '</td><td>' + l.distance + ' km</td></tr>'); h += '</tbody></table>'; d.innerHTML = h; }
+        function showAddMileageForm() { const v = prompt('Vehicle:'); if (!v) return; const dr = prompt('Driver:'); if (!dr) return; const s = prompt('From:'); if (!s) return; const e = prompt('To:'); if (!e) return; const dist = prompt('Distance (km):'); if (!dist) return; mileageLogs.push({ date: new Date().toLocaleDateString(), vehicleName: v, driverName: dr, startLocation: s, endLocation: e, distance: dist }); localStorage.setItem('as_mileage', JSON.stringify(mileageLogs)); loadMileage(); updateStats(); }
 
         document.addEventListener('click', function(e) { if (e.target.id === 'vehicleReportModal') closeReport(); });
         window.onload = init;
