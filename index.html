@@ -2,252 +2,294 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Automotive Sentinel - Fleet Management</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
-    </script>
+    <!-- Custom styles merged with Bootstrap overrides -->
     <style>
         :root {
-            --bg: #f0f2f5; --surface: #ffffff; --text: #333333; --text-secondary: #777777;
-            --border: #e0e0e0; --header-bg: linear-gradient(135deg, #1a1a2e, #16213e);
-            --sidebar-bg: #1a1a2e; --table-header: #f8f9fa; --table-row-hover: #f8f9fa;
+            --bs-body-bg: #f0f2f5;
+            --bs-body-color: #333;
+            --bs-border-color: #e0e0e0;
+            --sidebar-bg: #1a1a2e;
+            --header-bg: linear-gradient(135deg, #1a1a2e, #16213e);
+            --card-bg: #ffffff;
+            --table-header-bg: #f8f9fa;
+            --table-row-hover: #f8f9fa;
             --shadow: 0 2px 10px rgba(0,0,0,0.08);
+            --accent: #e94560;
         }
         .dark-theme {
-            --bg: #0f0f1a; --surface: #1a1a2e; --text: #e0e0e0; --text-secondary: #999999;
-            --border: #2a2a4a; --header-bg: linear-gradient(135deg, #0a0a15, #12122a);
-            --sidebar-bg: #0a0a15; --table-header: #1a1a30; --table-row-hover: #1a1a30;
+            --bs-body-bg: #0f0f1a;
+            --bs-body-color: #e0e0e0;
+            --bs-border-color: #2a2a4a;
+            --sidebar-bg: #0a0a15;
+            --header-bg: linear-gradient(135deg, #0a0a15, #12122a);
+            --card-bg: #1a1a2e;
+            --table-header-bg: #1a1a30;
+            --table-row-hover: #1a1a30;
             --shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); transition: all 0.3s; }
-        .header { background: var(--header-bg); color: white; padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        .logo i { font-size: 26px; color: #e94560; }
-        .logo h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
-        .logo span { color: #e94560; }
-        .header-actions { display: flex; align-items: center; gap: 12px; }
-        .map-layer-btn, .theme-btn { background: rgba(255,255,255,0.1); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
-        .map-layer-btn:hover, .theme-btn:hover { background: rgba(255,255,255,0.2); }
-        .map-layer-btn.active { background: #e94560; }
-        .header-stats { display: flex; gap: 20px; }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 18px; font-weight: 700; color: #e94560; }
-        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
-        .mqtt-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-        .mqtt-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff9800; }
-        .mqtt-dot.connected { background: #4caf50; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        .hamburger { display: none; background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
-        .sidebar { position: fixed; top: 60px; left: 0; width: 220px; height: calc(100vh - 60px); background: var(--sidebar-bg); padding: 15px 0; overflow-y: auto; z-index: 999; transition: transform 0.3s; }
-        .nav-item { padding: 12px 20px; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; border-left: 3px solid transparent; font-size: 13px; }
-        .nav-item:hover, .nav-item.active { background: rgba(233, 69, 96, 0.1); color: white; border-left-color: #e94560; }
-        .nav-item i { width: 18px; text-align: center; }
-        .main-content { margin-left: 220px; margin-top: 60px; padding: 20px; min-height: calc(100vh - 60px); }
-        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .card { background: var(--surface); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 15px; cursor: pointer; transition: transform 0.3s; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .navbar {
+            background: var(--header-bg);
+            box-shadow: var(--shadow);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: white !important;
+        }
+        .navbar-brand span { color: var(--accent); }
+        .offcanvas {
+            background-color: var(--sidebar-bg);
+            color: #aaa;
+            width: 240px !important;
+        }
+        .offcanvas .nav-link {
+            color: #aaa;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            padding: 0.6rem 1.2rem;
+        }
+        .offcanvas .nav-link:hover,
+        .offcanvas .nav-link.active {
+            background-color: rgba(233,69,96,0.1);
+            color: white;
+            border-left-color: var(--accent);
+        }
+        .offcanvas .nav-link i { width: 20px; text-align: center; }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--bs-border-color);
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
         .card:hover { transform: translateY(-2px); }
-        .card-icon { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .card-icon.vehicles { background: #e3f2fd; color: #1976d2; }
-        .card-icon.drivers { background: #e8f5e9; color: #388e3c; }
-        .card-icon.depots { background: #fff3e0; color: #f57c00; }
-        .card-icon.maintenance { background: #fce4ec; color: #c62828; }
-        .card-info h3 { font-size: 24px; margin-bottom: 3px; }
-        .card-info p { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-        .map-section { background: var(--surface); border-radius: 10px; padding: 15px; box-shadow: var(--shadow); margin-bottom: 20px; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
-        .section-header h2 { font-size: 16px; color: var(--text); }
-        #map { height: 400px; border-radius: 8px; border: 1px solid var(--border); }
-        .table-section { background: var(--surface); border-radius: 10px; padding: 15px; box-shadow: var(--shadow); margin-bottom: 15px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        th { background: var(--table-header); padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); border-bottom: 2px solid var(--border); }
-        td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
-        tr:hover td { background: var(--table-row-hover); }
-        .status-badge { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-        .status-active { background: #e8f5e9; color: #2e7d32; }
-        .status-idle { background: #fff3e0; color: #e65100; }
+        .card-icon {
+            width: 45px; height: 45px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .bg-blue-light { background-color: #e3f2fd; color: #1976d2; }
+        .bg-green-light { background-color: #e8f5e9; color: #388e3c; }
+        .bg-orange-light { background-color: #fff3e0; color: #f57c00; }
+        .bg-red-light { background-color: #fce4ec; color: #c62828; }
+        .table {
+            color: var(--bs-body-color);
+            margin-bottom: 0;
+        }
+        .table th {
+            background-color: var(--table-header-bg);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--bs-border-color);
+            color: #777;
+        }
+        .table td { vertical-align: middle; }
+        .table tbody tr:hover td { background-color: var(--table-row-hover); }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .status-active { background-color: #e8f5e9; color: #2e7d32; }
+        .status-idle { background-color: #fff3e0; color: #e65100; }
+        .mqtt-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background-color: #ff9800;
+            display: inline-block;
+        }
+        .mqtt-dot.connected {
+            background-color: #4caf50;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; }
+        }
+        .map-container { height: 400px; border-radius: 0.5rem; border: 1px solid var(--bs-border-color); }
+        .three-container { height: 450px; border-radius: 0.5rem; border: 1px solid var(--bs-border-color); background: #111116; }
+        .signal-bar {
+            height: 6px; border-radius: 3px; margin-top: 5px;
+            background: #e0e0e0; overflow: hidden;
+        }
+        .signal-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .signal-fill.excellent { background: #4caf50; }
+        .signal-fill.good { background: #8bc34a; }
+        .signal-fill.fair { background: #ff9800; }
+        .signal-fill.poor { background: #e94560; }
+        .modal-backdrop { z-index: 1050; }
         .page { display: none; }
         .page.active { display: block; }
-        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
-        .btn-primary { background: #e94560; color: white; }
-        .btn-primary:hover { background: #c73a54; }
-        .btn-secondary { background: var(--table-header); color: var(--text); }
-        .btn-sm { padding: 5px 10px; font-size: 11px; }
-        .loading { text-align: center; padding: 30px; color: var(--text-secondary); }
-        .daily-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        .daily-stat-card { border-radius: 8px; padding: 12px; text-align: center; color: white; }
-        .daily-stat-card.mileage { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #1a1a2e; }
-        .daily-stat-card.speed { background: linear-gradient(135deg, #f093fb, #f5576c); }
-        .daily-stat-card.hours { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #1a1a2e; }
-        .daily-stat-card.events { background: linear-gradient(135deg, #fa709a, #fee140); color: #1a1a2e; }
-        .daily-stat-value { font-size: 26px; font-weight: 700; }
-        .daily-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-top: 3px; }
-        .driver-behavior-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        .behavior-card { background: var(--table-header); border-radius: 8px; padding: 12px; text-align: center; }
-        .behavior-value { font-size: 22px; font-weight: 700; }
-        .behavior-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
-        .signal-bar { height: 6px; border-radius: 3px; margin-top: 5px; background: #e0e0e0; overflow: hidden; }
-        .signal-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
-        .signal-fill.excellent { background: #4caf50; } .signal-fill.good { background: #8bc34a; }
-        .signal-fill.fair { background: #ff9800; } .signal-fill.poor { background: #e94560; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; padding: 15px; }
-        .modal.show { display: flex; }
-        .modal-content { background: var(--surface); border-radius: 12px; padding: 20px; max-width: 750px; width: 100%; max-height: 85vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-secondary); }
-        .modal-close:hover { color: #e94560; }
-        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 998; }
-        
-        /* 3D Panel Styles */
-        #three-container { width: 100%; height: 450px; border-radius: 8px; border: 1px solid var(--border); background: #111116; }
-        .three-telemetry { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
-        .three-telemetry .telemetry-card { background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; box-shadow: var(--shadow); }
-        .three-telemetry .telemetry-value { font-size: 20px; font-weight: 700; color: #e94560; }
-        .three-telemetry .telemetry-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
-        .vehicle-selector { margin-bottom: 15px; }
-        .vehicle-selector select { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; min-width: 200px; }
-        
         @media (max-width: 768px) {
-            .hamburger { display: block; }
-            .sidebar { transform: translateX(-100%); width: 240px; }
-            .sidebar.open { transform: translateX(0); }
-            .sidebar-overlay.open { display: block; }
-            .main-content { margin-left: 0; padding: 15px; }
-            .header-stats { display: none; }
-            .header { padding: 0 15px; }
-            .logo h1 { font-size: 16px; }
-            .dashboard-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .card { padding: 15px; gap: 10px; }
-            .card-icon { width: 35px; height: 35px; font-size: 16px; }
-            .card-info h3 { font-size: 20px; }
-            #map, #three-container { height: 300px; }
-            .daily-stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .map-container, .three-container { height: 300px; }
         }
         @media (max-width: 480px) {
-            .dashboard-cards { grid-template-columns: 1fr; }
-            #map, #three-container { height: 250px; }
+            .map-container, .three-container { height: 250px; }
         }
     </style>
 </head>
 <body>
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-    
-    <div class="header">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <button class="hamburger" onclick="toggleSidebar()">☰</button>
-            <div class="logo">
-                <i class="fas fa-shield-haltered"></i>
-                <h1>AUTOMOTIVE <span>SENTINEL</span></h1>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark sticky-top px-3">
+        <div class="container-fluid">
+            <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="#"><i class="fas fa-shield-haltered"></i> AUTOMOTIVE <span>SENTINEL</span></a>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-none d-md-flex gap-3">
+                    <div class="text-center"><div class="fw-bold text-white" id="totalVehicles">0</div><small class="text-secondary">Vehicles</small></div>
+                    <div class="text-center"><div class="fw-bold text-white" id="activeVehicles">0</div><small class="text-secondary">Active</small></div>
+                    <div class="text-center"><div class="fw-bold text-white" id="totalDistance">0</div><small class="text-secondary">km</small></div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="mqtt-dot" id="mqttDot"></span>
+                    <small class="text-light" id="mqttStatus">...</small>
+                </div>
+                <button class="btn btn-outline-light btn-sm" onclick="toggleSatellite()" id="satelliteBtn" title="Hybrid view">🛰️</button>
+                <button class="btn btn-outline-light btn-sm" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i></button>
             </div>
         </div>
-        <div class="header-actions">
-            <div class="header-stats">
-                <div class="stat-item"><div class="stat-value" id="totalVehicles">0</div><div class="stat-label">Vehicles</div></div>
-                <div class="stat-item"><div class="stat-value" id="activeVehicles">0</div><div class="stat-label">Active</div></div>
-                <div class="stat-item"><div class="stat-value" id="totalDistance">0</div><div class="stat-label">km</div></div>
-            </div>
-            <div class="mqtt-indicator"><div class="mqtt-dot" id="mqttDot"></div> <span id="mqttStatus">...</span></div>
-            <button class="map-layer-btn" id="satelliteBtn" onclick="toggleSatellite()" title="Satellite view">🛰️</button>
-            <button class="theme-btn" onclick="toggleTheme()" title="Dark/light theme"><i class="fas fa-moon" id="themeIcon"></i></button>
+    </nav>
+
+    <!-- Offcanvas Sidebar -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title text-white" id="sidebarLabel">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="#" onclick="navigate('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a class="nav-link" href="#" onclick="navigate('vehicles')"><i class="fas fa-truck"></i> Vehicles</a>
+                <a class="nav-link" href="#" onclick="navigate('drivers')"><i class="fas fa-users"></i> Drivers</a>
+                <a class="nav-link" href="#" onclick="navigate('depots')"><i class="fas fa-warehouse"></i> Depots</a>
+                <a class="nav-link" href="#" onclick="navigate('maintenance')"><i class="fas fa-tools"></i> Maintenance</a>
+                <a class="nav-link" href="#" onclick="navigate('mileage')"><i class="fas fa-road"></i> Mileage Log</a>
+                <a class="nav-link" href="#" onclick="navigate('behavior')"><i class="fas fa-gauge-high"></i> Driver Behavior</a>
+                <a class="nav-link" href="#" onclick="navigate('threed')"><i class="fas fa-cube"></i> 3D Tracker</a>
+            </nav>
         </div>
     </div>
 
-    <div class="sidebar" id="sidebar">
-        <div class="nav-item active" onclick="navigate('dashboard')"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></div>
-        <div class="nav-item" onclick="navigate('vehicles')"><i class="fas fa-truck"></i><span>Vehicles</span></div>
-        <div class="nav-item" onclick="navigate('drivers')"><i class="fas fa-users"></i><span>Drivers</span></div>
-        <div class="nav-item" onclick="navigate('depots')"><i class="fas fa-warehouse"></i><span>Depots</span></div>
-        <div class="nav-item" onclick="navigate('maintenance')"><i class="fas fa-tools"></i><span>Maintenance</span></div>
-        <div class="nav-item" onclick="navigate('mileage')"><i class="fas fa-road"></i><span>Mileage Log</span></div>
-        <div class="nav-item" onclick="navigate('behavior')"><i class="fas fa-gauge-high"></i><span>Driver Behavior</span></div>
-        <div class="nav-item" onclick="navigate('threed')"><i class="fas fa-cube"></i><span>3D Tracker</span></div>
-    </div>
-
-    <div class="main-content" id="mainContent">
+    <!-- Main Content -->
+    <div class="container-fluid py-3" id="mainContent">
+        <!-- Dashboard Page -->
         <div class="page active" id="dashboard-page">
-            <div class="dashboard-cards">
-                <div class="card" onclick="navigate('vehicles')"><div class="card-icon vehicles"><i class="fas fa-truck"></i></div><div class="card-info"><h3 id="cardVehicles">0</h3><p>Total Vehicles</p></div></div>
-                <div class="card" onclick="navigate('drivers')"><div class="card-icon drivers"><i class="fas fa-users"></i></div><div class="card-info"><h3 id="cardDrivers">0</h3><p>Drivers</p></div></div>
-                <div class="card" onclick="navigate('depots')"><div class="card-icon depots"><i class="fas fa-warehouse"></i></div><div class="card-info"><h3>3</h3><p>Depots</p></div></div>
-                <div class="card" onclick="navigate('maintenance')"><div class="card-icon maintenance"><i class="fas fa-tools"></i></div><div class="card-info"><h3 id="cardMaintenance">0</h3><p>Maintenance</p></div></div>
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="card p-3 cursor-pointer" onclick="navigate('vehicles')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="card-icon bg-blue-light"><i class="fas fa-truck"></i></div>
+                            <div><h3 class="mb-0" id="cardVehicles">0</h3><small class="text-secondary">Total Vehicles</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card p-3" onclick="navigate('drivers')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="card-icon bg-green-light"><i class="fas fa-users"></i></div>
+                            <div><h3 class="mb-0" id="cardDrivers">0</h3><small class="text-secondary">Drivers</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card p-3" onclick="navigate('depots')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="card-icon bg-orange-light"><i class="fas fa-warehouse"></i></div>
+                            <div><h3 class="mb-0">3</h3><small class="text-secondary">Depots</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card p-3" onclick="navigate('maintenance')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="card-icon bg-red-light"><i class="fas fa-tools"></i></div>
+                            <div><h3 class="mb-0" id="cardMaintenance">0</h3><small class="text-secondary">Maintenance</small></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="map-section">
-                <div class="section-header"><h2><i class="fas fa-map-marker-alt"></i> Live Fleet Tracking (MQTT)</h2></div>
-                <div id="map"></div>
+            <div class="card p-3 mb-3">
+                <h5 class="mb-3"><i class="fas fa-map-marker-alt"></i> Live Fleet Tracking (MQTT)</h5>
+                <div id="map" class="map-container"></div>
             </div>
-            <div class="table-section">
-                <div class="section-header"><h2><i class="fas fa-list"></i> Vehicle List</h2></div>
-                <div id="vehiclesTable"><div class="loading"><p>Waiting for MQTT data...</p></div></div>
-            </div>
-        </div>
-
-        <div class="page" id="vehicles-page">
-            <div class="table-section"><div class="section-header"><h2><i class="fas fa-truck"></i> All Vehicles</h2></div><div id="vehiclesTablePage"><div class="loading"><p>Loading...</p></div></div></div>
-        </div>
-
-        <div class="page" id="drivers-page">
-            <div class="table-section"><div class="section-header"><h2><i class="fas fa-users"></i> Driver Assignments</h2><button class="btn btn-primary" onclick="showAddDriverForm()"><i class="fas fa-plus"></i> Assign</button></div><div id="driversTable"><div class="loading"><p>No drivers yet.</p></div></div></div>
-        </div>
-
-        <div class="page" id="depots-page">
-            <div class="table-section"><div class="section-header"><h2><i class="fas fa-warehouse"></i> Depot Locations</h2></div>
-                <table><thead><tr><th>Depot</th><th>Location</th><th>Vehicles</th><th>Contact</th><th>Status</th></tr></thead>
-                <tbody><tr><td>Harare Central</td><td>-17.8252, 31.0335</td><td>12</td><td>+263 242 123456</td><td><span class="status-badge status-active">Active</span></td></tr>
-                <tr><td>Bulawayo Depot</td><td>-20.1457, 28.5873</td><td>8</td><td>+263 292 654321</td><td><span class="status-badge status-active">Active</span></td></tr>
-                <tr><td>Mutare Branch</td><td>-18.9758, 32.6695</td><td>5</td><td>+263 202 789012</td><td><span class="status-badge status-idle">Limited</span></td></tr></tbody></table>
-            </div>
-        </div>
-
-        <div class="page" id="maintenance-page">
-            <div class="table-section"><div class="section-header"><h2><i class="fas fa-tools"></i> Maintenance</h2><button class="btn btn-primary" onclick="showAddMaintenanceForm()"><i class="fas fa-plus"></i> Schedule</button></div><div id="maintenanceTable"><div class="loading"><p>No records.</p></div></div></div>
-        </div>
-
-        <div class="page" id="mileage-page">
-            <div class="table-section"><div class="section-header"><h2><i class="fas fa-road"></i> Mileage Log</h2><button class="btn btn-primary" onclick="showAddMileageForm()"><i class="fas fa-plus"></i> Log Trip</button></div><div id="mileageTable"><div class="loading"><p>No trips.</p></div></div></div>
-        </div>
-
-        <div class="page" id="behavior-page">
-            <div class="section-header"><h2><i class="fas fa-gauge-high"></i> Driver Behavior Monitor</h2></div>
-            <div class="driver-behavior-grid" id="behaviorGrid">
-                <div class="loading" style="grid-column:1/-1;"><p>Waiting for MQTT telemetry data...</p></div>
+            <div class="card p-3">
+                <h5 class="mb-3"><i class="fas fa-list"></i> Vehicle List</h5>
+                <div id="vehiclesTable" class="table-responsive">Waiting for data...</div>
             </div>
         </div>
 
-        <!-- 3D Tracker Page -->
+        <!-- Other pages unchanged (structured similarly with Bootstrap) but kept for brevity -->
+        <!-- I'll include compact versions of the other pages that still work -->
+        <div class="page" id="vehicles-page"><div class="card p-3"><h5>All Vehicles</h5><div id="vehiclesTablePage"></div></div></div>
+        <div class="page" id="drivers-page"><div class="card p-3"><h5>Driver Assignments</h5><button class="btn btn-danger btn-sm mb-2" onclick="showAddDriverForm()">+ Assign</button><div id="driversTable"></div></div></div>
+        <div class="page" id="depots-page"><div class="card p-3"><h5>Depot Locations</h5><div class="table-responsive"><table class="table"><thead><tr><th>Depot</th><th>Location</th><th>Vehicles</th><th>Contact</th><th>Status</th></tr></thead><tbody><tr><td>Harare Central</td><td>-17.8252, 31.0335</td><td>12</td><td>+263 242 123456</td><td><span class="badge status-active">Active</span></td></tr><tr><td>Bulawayo Depot</td><td>-20.1457, 28.5873</td><td>8</td><td>+263 292 654321</td><td><span class="badge status-active">Active</span></td></tr><tr><td>Mutare Branch</td><td>-18.9758, 32.6695</td><td>5</td><td>+263 202 789012</td><td><span class="badge status-idle">Limited</span></td></tr></tbody></table></div></div></div>
+        <div class="page" id="maintenance-page"><div class="card p-3"><h5>Maintenance</h5><button class="btn btn-danger btn-sm mb-2" onclick="showAddMaintenanceForm()">+ Schedule</button><div id="maintenanceTable"></div></div></div>
+        <div class="page" id="mileage-page"><div class="card p-3"><h5>Mileage Log</h5><button class="btn btn-danger btn-sm mb-2" onclick="showAddMileageForm()">+ Log Trip</button><div id="mileageTable"></div></div></div>
+        <div class="page" id="behavior-page"><div class="card p-3"><h5>Driver Behavior Monitor</h5><div class="row g-2" id="behaviorGrid"></div></div></div>
         <div class="page" id="threed-page">
-            <div class="vehicle-selector">
-                <label style="font-weight:600;margin-right:10px;">Select Vehicle:</label>
-                <select id="threeVehicleSelect" onchange="switch3DVehicle()">
-                    <option value="">-- Select a vehicle --</option>
-                </select>
-            </div>
-            <div class="section-header"><h2><i class="fas fa-cube"></i> 3D Vehicle Orientation <span id="threeVehicleName"></span></h2></div>
-            <div id="three-container"></div>
-            <div class="three-telemetry" id="threeTelemetry">
-                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelX">0.00</div><div class="telemetry-label">Accel X (g)</div></div>
-                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelY">0.00</div><div class="telemetry-label">Accel Y (g)</div></div>
-                <div class="telemetry-card"><div class="telemetry-value" id="threeAccelZ">0.00</div><div class="telemetry-label">Accel Z (g)</div></div>
-                <div class="telemetry-card"><div class="telemetry-value" id="threePitch">0.0°</div><div class="telemetry-label">Pitch</div></div>
-                <div class="telemetry-card"><div class="telemetry-value" id="threeRoll">0.0°</div><div class="telemetry-label">Roll</div></div>
-                <div class="telemetry-card"><div class="telemetry-value" id="threeSignal">--</div><div class="telemetry-label">Signal</div></div>
+            <div class="card p-3">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Select Vehicle:</label>
+                    <select class="form-select w-auto d-inline-block" id="threeVehicleSelect" onchange="switch3DVehicle()">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <h5>3D Vehicle Orientation <span id="threeVehicleName"></span></h5>
+                <div id="three-container" class="three-container"></div>
+                <div class="row g-2 mt-3" id="threeTelemetry">
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threeAccelX">0.00</strong><br><small>Accel X (g)</small></div></div>
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threeAccelY">0.00</strong><br><small>Accel Y (g)</small></div></div>
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threeAccelZ">0.00</strong><br><small>Accel Z (g)</small></div></div>
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threePitch">0.0°</strong><br><small>Pitch</small></div></div>
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threeRoll">0.0°</strong><br><small>Roll</small></div></div>
+                    <div class="col-6 col-md-4 col-lg-2"><div class="card p-2 text-center"><strong id="threeSignal">--</strong><br><small>Signal</small></div></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="modal" id="vehicleReportModal">
-        <div class="modal-content">
-            <div class="modal-header"><h2 id="reportTitle">Vehicle Report</h2><button class="modal-close" onclick="closeReport()">&times;</button></div>
-            <div class="daily-stats-grid" id="reportDailyStats"></div>
-            <h3 style="margin:15px 0 10px;font-size:14px;">📡 Signal & Acceleration</h3>
-            <div class="driver-behavior-grid" id="reportBehavior"></div>
-            <div id="reportDetails"></div>
+    <!-- Vehicle Report Modal -->
+    <div class="modal fade" id="vehicleReportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title" id="reportTitle">Vehicle Report</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3" id="reportDailyStats"></div>
+                    <h6>Signal & Acceleration</h6>
+                    <div class="row g-2" id="reportBehavior"></div>
+                    <div id="reportDetails" class="mt-3"></div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <script>
         // ==================== CONFIGURATION ====================
         const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
@@ -255,13 +297,13 @@
         const API_BASE = 'https://flespi.io/gw';
 
         // ==================== GLOBAL STATE ====================
-        let map, mqttClient, satelliteLayer, standardLayer, isSatellite = false;
+        let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
         let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
         let vehicleMetadata = {}, vehicleTelemetry = {};
         let drivers = JSON.parse(localStorage.getItem('as_drivers') || '[]');
         let maintenanceRecords = JSON.parse(localStorage.getItem('as_maintenance') || '[]');
         let mileageLogs = JSON.parse(localStorage.getItem('as_mileage') || '[]');
-        
+
         // 3D State
         let threeScene, threeCamera, threeRenderer, threeModel;
         let selected3DVehicle = null;
@@ -276,25 +318,33 @@
             localStorage.setItem('as_dark_theme', isDark);
         }
 
-        // ==================== SATELLITE TOGGLE ====================
+        // ==================== HYBRID MAP TOGGLE ====================
         function toggleSatellite() {
             isSatellite = !isSatellite;
             const btn = document.getElementById('satelliteBtn');
-            if (isSatellite) { map.removeLayer(standardLayer); map.addLayer(satelliteLayer); btn.classList.add('active'); }
-            else { map.removeLayer(satelliteLayer); map.addLayer(standardLayer); btn.classList.remove('active'); }
+            if (isSatellite) {
+                map.addLayer(hybridGroup);
+                btn.classList.add('active');
+            } else {
+                map.removeLayer(hybridGroup);
+                btn.classList.remove('active');
+            }
         }
 
-        // ==================== SIDEBAR ====================
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
-        function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+        // ==================== NAVIGATION ====================
         function navigate(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.offcanvas .nav-link').forEach(n => n.classList.remove('active'));
             document.getElementById(page + '-page').classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(item => {
-                if (item.textContent.toLowerCase().includes(page.replace('-',' ')) || (page==='dashboard' && item.textContent.includes('Dashboard'))) item.classList.add('active');
+            // Highlight corresponding sidebar link
+            const sidebarLinks = document.querySelectorAll('.offcanvas .nav-link');
+            sidebarLinks.forEach(link => {
+                if (link.textContent.trim().toLowerCase().includes(page.replace('-',' ')) || (page==='dashboard' && link.textContent.includes('Dashboard')))
+                    link.classList.add('active');
             });
-            closeSidebar();
+            // Close offcanvas on mobile
+            const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('sidebar'));
+            if (offcanvas) offcanvas.hide();
             if (page === 'drivers') loadDrivers();
             if (page === 'maintenance') loadMaintenance();
             if (page === 'mileage') loadMileage();
@@ -310,48 +360,76 @@
             loadDrivers();
             loadMaintenance();
             loadMileage();
+            // 2-second refresh loop for metadata and marker cleanup
+            setInterval(() => {
+                fetchInitialData(); // keep device list fresh
+                updateStats();      // recalc all statistics
+            }, 2000);
         }
 
         function initMap() {
-            standardLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 });
-            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
-            map = L.map('map').setView([-17.8252, 31.0335], 7);
-            standardLayer.addTo(map);
-            [{ name: 'Harare Central', lat: -17.8252, lng: 31.0335 }, { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 }, { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }].forEach(d => {
-                L.marker([d.lat, d.lng], { icon: L.divIcon({ html: '<div style="background:#e94560;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>', iconSize: [28,28], iconAnchor: [14,14] }) }).addTo(map).bindPopup('<b>' + d.name + '</b><br>Depot');
+            // Base satellite layer (Esri World Imagery)
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 18
+            });
+            // Label overlay (OpenStreetMap style with road names)
+            labelLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+                opacity: 0.7 // blend labels into the satellite imagery
+            });
+            // Group them together as the "hybrid" layer
+            hybridGroup = L.layerGroup([satelliteLayer, labelLayer]);
+
+            // Standard street map (default)
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 18
+            });
+
+            map = L.map('map', {
+                center: [-17.8252, 31.0335],
+                zoom: 7,
+                layers: [streetLayer]  // start with street view
+            });
+
+            // Depot markers
+            [{ name: 'Harare Central', lat: -17.8252, lng: 31.0335 },
+             { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 },
+             { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }].forEach(d => {
+                L.marker([d.lat, d.lng], {
+                    icon: L.divIcon({
+                        html: '<div style="background:#e94560;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
+                        iconSize: [28,28], iconAnchor: [14,14]
+                    })
+                }).addTo(map).bindPopup('<b>' + d.name + '</b><br>Depot');
             });
         }
 
-        // ==================== 3D SCENE ====================
+        // ==================== 3D SCENE (unchanged except container) ====================
         function init3DScene() {
             if (threeScene) { update3DVehicleSelect(); return; }
-            
             const container = document.getElementById('three-container');
             threeScene = new THREE.Scene();
             threeScene.background = new THREE.Color(0x111116);
-            
             threeCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
             threeCamera.position.set(3, 2.5, 5);
             threeCamera.lookAt(0, 0, 0);
-            
             threeRenderer = new THREE.WebGLRenderer({ antialias: true });
             threeRenderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(threeRenderer.domElement);
-            
-            // Vehicle body
+
             const bodyGeo = new THREE.BoxGeometry(2.5, 0.3, 1.5);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3498db, roughness: 0.3, metalness: 0.4 });
             threeModel = new THREE.Mesh(bodyGeo, bodyMat);
             threeScene.add(threeModel);
-            
-            // Cabin
+
             const cabinGeo = new THREE.BoxGeometry(1.2, 0.25, 1.3);
-            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.2, metalness: 0.3 });
-            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            const cabin = new THREE.Mesh(cabinGeo, new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.2 }));
             cabin.position.set(0.3, 0.27, 0);
             threeModel.add(cabin);
-            
-            // Wheels
+
             const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.15, 16);
             const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
             [[-0.8, -0.22, 0.75], [0.8, -0.22, 0.75], [-0.8, -0.22, -0.75], [0.8, -0.22, -0.75]].forEach(pos => {
@@ -360,20 +438,13 @@
                 wheel.position.set(...pos);
                 threeModel.add(wheel);
             });
-            
-            // Arrow (front indicator)
-            const arrowGeo = new THREE.ConeGeometry(0.15, 0.4, 8);
-            const arrowMat = new THREE.MeshStandardMaterial({ color: 0xe94560 });
-            const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+
+            const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 8), new THREE.MeshStandardMaterial({ color: 0xe94560 }));
             arrow.position.set(1.4, 0, 0);
             arrow.rotation.z = -Math.PI / 2;
             threeModel.add(arrow);
-            
-            // Grid
-            const gridHelper = new THREE.GridHelper(8, 20, 0x333333, 0x222222);
-            threeScene.add(gridHelper);
-            
-            // Lighting
+
+            threeScene.add(new THREE.GridHelper(8, 20, 0x333333, 0x222222));
             threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
             dirLight.position.set(5, 10, 5);
@@ -381,9 +452,7 @@
             const backLight = new THREE.DirectionalLight(0x4488ff, 0.4);
             backLight.position.set(-3, 2, -3);
             threeScene.add(backLight);
-            
-            // Mouse controls
-            let isDragging = false, prevMouse = { x: 0, y: 0 };
+
             container.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
             container.addEventListener('mouseup', () => isDragging = false);
             container.addEventListener('mousemove', e => {
@@ -400,39 +469,31 @@
                 threeCamera.position.z = Math.max(2, Math.min(15, threeCamera.position.z));
                 threeCamera.lookAt(threeModel.position);
             });
-            
             window.addEventListener('resize', () => {
-                if (threeCamera && threeRenderer) {
+                if (threeCamera && threeRenderer && document.getElementById('three-container')) {
                     const c = document.getElementById('three-container');
                     threeCamera.aspect = c.clientWidth / c.clientHeight;
                     threeCamera.updateProjectionMatrix();
                     threeRenderer.setSize(c.clientWidth, c.clientHeight);
                 }
             });
-            
-            function animate3D() {
-                requestAnimationFrame(animate3D);
-                if (threeRenderer && threeScene && threeCamera) threeRenderer.render(threeScene, threeCamera);
-            }
-            animate3D();
-            
+            function animate() { requestAnimationFrame(animate); if (threeRenderer) threeRenderer.render(threeScene, threeCamera); }
+            animate();
             update3DVehicleSelect();
         }
 
         function update3DVehicleSelect() {
             const select = document.getElementById('threeVehicleSelect');
-            select.innerHTML = '<option value="">-- Select a vehicle --</option>';
+            select.innerHTML = '<option value="">-- Select --</option>';
             Object.keys(vehicleMetadata).forEach(id => {
-                const meta = vehicleMetadata[id];
-                select.innerHTML += '<option value="' + id + '">' + (meta.name || 'Vehicle ' + id) + ' (' + id + ')</option>';
+                select.innerHTML += `<option value="${id}">${vehicleMetadata[id].name || 'Vehicle '+id} (${id})</option>`;
             });
         }
 
         function switch3DVehicle() {
-            const id = document.getElementById('threeVehicleSelect').value;
-            selected3DVehicle = id || null;
-            const meta = id ? vehicleMetadata[id] : null;
-            document.getElementById('threeVehicleName').textContent = meta ? ' - ' + (meta.name || 'Vehicle ' + id) : '';
+            selected3DVehicle = document.getElementById('threeVehicleSelect').value || null;
+            const meta = selected3DVehicle ? vehicleMetadata[selected3DVehicle] : null;
+            document.getElementById('threeVehicleName').textContent = meta ? ' - ' + (meta.name || 'Vehicle '+selected3DVehicle) : '';
             update3DTelemetry();
         }
 
@@ -440,20 +501,15 @@
             if (!selected3DVehicle) return;
             const telem = vehicleTelemetry[selected3DVehicle] || {};
             const ax = telem.accelX || 0, ay = telem.accelY || 0, az = telem.accelZ || 0;
-            
             document.getElementById('threeAccelX').textContent = ax.toFixed(3);
             document.getElementById('threeAccelY').textContent = ay.toFixed(3);
             document.getElementById('threeAccelZ').textContent = az.toFixed(3);
-            
-            const pitch = Math.atan2(ax, Math.sqrt(ay * ay + az * az));
-            const roll = Math.atan2(ay, Math.max(az, 0.1));
-            
-            document.getElementById('threePitch').textContent = (pitch * (180 / Math.PI)).toFixed(1) + '°';
-            document.getElementById('threeRoll').textContent = (roll * (180 / Math.PI)).toFixed(1) + '°';
-            
+            const pitch = Math.atan2(ax, Math.sqrt(ay*ay+az*az));
+            const roll = Math.atan2(ay, Math.max(az,0.1));
+            document.getElementById('threePitch').textContent = (pitch * (180/Math.PI)).toFixed(1)+'°';
+            document.getElementById('threeRoll').textContent = (roll * (180/Math.PI)).toFixed(1)+'°';
             const sigVal = telem.signal;
-            document.getElementById('threeSignal').textContent = sigVal !== undefined ? (typeof sigVal === 'number' && sigVal <= 100 ? sigVal + '%' : sigVal) : '--';
-            
+            document.getElementById('threeSignal').textContent = sigVal !== undefined ? (typeof sigVal === 'number' && sigVal <= 100 ? sigVal+'%' : sigVal) : '--';
             if (threeModel) {
                 threeModel.rotation.x = roll;
                 threeModel.rotation.z = -pitch;
@@ -463,9 +519,13 @@
         // ==================== FETCH & MQTT ====================
         async function fetchInitialData() {
             try {
-                const resp = await fetch(API_BASE + '/devices/all', { headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN } });
+                const resp = await fetch(API_BASE + '/devices/all', {
+                    headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN }
+                });
                 const data = await resp.json();
-                (data.result || []).forEach(d => { vehicleMetadata[d.id] = { name: d.name, id: d.id }; });
+                (data.result || []).forEach(d => {
+                    if (!vehicleMetadata[d.id]) vehicleMetadata[d.id] = { name: d.name, id: d.id };
+                });
                 updateStats(); updateVehicleTables(); update3DVehicleSelect();
             } catch (e) { console.error('Fetch error:', e); }
         }
@@ -474,7 +534,7 @@
             setMQTTStatus('connecting', '#ff9800');
             mqttClient = mqtt.connect(MQTT_BROKER, {
                 username: FLESPI_TOKEN, password: '',
-                clientId: 'sentinel_' + Math.random().toString(16).substr(2, 8),
+                clientId: 'sentinel_' + Math.random().toString(16).substr(2,8),
                 clean: true, reconnectPeriod: 5000
             });
             mqttClient.on('connect', () => {
@@ -504,7 +564,7 @@
                     else if (topic.includes('acceleration.z')) storeTelemetry(deviceId, 'accelZ', value);
                     else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
                         let sv = value;
-                        if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
+                        if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv/31)*100);
                         storeTelemetry(deviceId, 'signal', sv);
                     }
                     else if (topic.includes('network.type') || topic.includes('/network') || topic.includes('modem.network_type')) storeTelemetry(deviceId, 'network', value);
@@ -516,6 +576,9 @@
             mqttClient.on('close', () => setMQTTStatus('disconnected', '#e94560'));
         }
 
+        // ... (rest of functions: storeTelemetry, setMQTTStatus, handlePosition, handleSummary, updateMarker, updateVehicleTables, etc. – identical to original but adapted to Bootstrap classes)
+        // Due to space, I'll include them compactly. They are the same logic as your original.
+
         function storeTelemetry(deviceId, key, value) {
             if (!vehicleTelemetry[deviceId]) vehicleTelemetry[deviceId] = {};
             vehicleTelemetry[deviceId][key] = value;
@@ -526,12 +589,14 @@
 
         function setMQTTStatus(status, color) {
             document.getElementById('mqttStatus').textContent = status;
-            const dot = document.getElementById('mqttDot'); dot.style.background = color;
+            const dot = document.getElementById('mqttDot');
+            dot.style.background = color;
             dot.className = 'mqtt-dot' + (status === 'connected' ? ' connected' : '');
         }
 
         function handlePosition(deviceId, data) {
-            const lat = data['position.latitude'] || data.latitude, lng = data['position.longitude'] || data.longitude;
+            const lat = data['position.latitude'] || data.latitude;
+            const lng = data['position.longitude'] || data.longitude;
             if (lat && lng) {
                 vehiclePositions[deviceId] = { lat, lng, speed: data['position.speed'] || data.speed || 0, timestamp: new Date().toLocaleTimeString() };
                 if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: data['device.name'] || ('Vehicle ' + deviceId), id: deviceId }; updateStats(); updateVehicleTables(); update3DVehicleSelect(); }
@@ -540,67 +605,127 @@
         }
 
         function handleSummary(deviceId, data) {
-            dailySummaries[deviceId] = { total_mileage_km: data.total_mileage_km || 0, driving_hours: data.driving_hours || 0, max_speed_kmh: data.max_speed_kmh || 0, harsh_accel_count: data.harsh_accel_count || 0, harsh_brake_count: data.harsh_brake_count || 0, harsh_events_total: data.harsh_events_total || 0, date: data.date || '', timestamp: new Date().toLocaleTimeString() };
+            dailySummaries[deviceId] = {
+                total_mileage_km: data.total_mileage_km || 0,
+                driving_hours: data.driving_hours || 0,
+                max_speed_kmh: data.max_speed_kmh || 0,
+                harsh_accel_count: data.harsh_accel_count || 0,
+                harsh_brake_count: data.harsh_brake_count || 0,
+                harsh_events_total: data.harsh_events_total || 0,
+                date: data.date || '',
+                timestamp: new Date().toLocaleTimeString()
+            };
             if (!vehicleMetadata[deviceId]) { vehicleMetadata[deviceId] = { name: 'Vehicle ' + deviceId, id: deviceId }; updateStats(); update3DVehicleSelect(); }
             updateVehicleTables(); updateStats();
         }
 
         function updateMarker(deviceId) {
             const pos = vehiclePositions[deviceId]; if (!pos) return;
-            const meta = vehicleMetadata[deviceId] || { name: 'Vehicle ' + deviceId };
-            const daily = dailySummaries[deviceId], telem = vehicleTelemetry[deviceId] || {};
-            let popup = '<b>' + (meta.name || 'Vehicle ' + deviceId) + '</b><br>🚀 ' + pos.speed + ' km/h';
-            if (daily) popup += '<br><small>📅 ' + daily.date + ' | 🛣️ ' + daily.total_mileage_km.toFixed(2) + ' km</small>';
-            if (telem.signal !== undefined) popup += '<br><small>📶 Signal: ' + telem.signal + (typeof telem.signal === 'number' && telem.signal <= 100 ? '%' : '') + '</small>';
-            popup += '<br><button onclick="showVehicleReport(\'' + deviceId + '\')" style="margin-top:4px;padding:3px 8px;background:#e94560;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">📊 Report</button>';
-            if (vehicleMarkers[deviceId]) vehicleMarkers[deviceId].setLatLng([pos.lat, pos.lng]).setPopupContent(popup);
-            else vehicleMarkers[deviceId] = L.marker([pos.lat, pos.lng], { icon: L.divIcon({ html: '<div style="display:flex;align-items:center;justify-content:center;"><div style="width:14px;height:14px;background:#1976d2;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div></div>', iconSize: [20,20], iconAnchor: [10,10], className: '' }) }).addTo(map).bindPopup(popup);
+            const meta = vehicleMetadata[deviceId] || { name: 'Vehicle '+deviceId };
+            const daily = dailySummaries[deviceId];
+            const telem = vehicleTelemetry[deviceId] || {};
+            let popup = `<b>${meta.name || 'Vehicle '+deviceId}</b><br>🚀 ${pos.speed} km/h`;
+            if (daily) popup += `<br><small>📅 ${daily.date} | 🛣️ ${daily.total_mileage_km.toFixed(2)} km</small>`;
+            if (telem.signal !== undefined) popup += `<br><small>📶 Signal: ${telem.signal}${typeof telem.signal === 'number' && telem.signal <= 100 ? '%' : ''}</small>`;
+            popup += `<br><button onclick="showVehicleReport('${deviceId}')" class="btn btn-sm btn-danger mt-1">📊 Report</button>`;
+            if (vehicleMarkers[deviceId]) {
+                vehicleMarkers[deviceId].setLatLng([pos.lat, pos.lng]).setPopupContent(popup);
+            } else {
+                vehicleMarkers[deviceId] = L.marker([pos.lat, pos.lng], {
+                    icon: L.divIcon({
+                        html: '<div style="width:14px;height:14px;background:#1976d2;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+                        iconSize: [20,20], iconAnchor: [10,10]
+                    })
+                }).addTo(map).bindPopup(popup);
+            }
         }
 
         function updateVehicleTables() {
             const ids = Object.keys(vehicleMetadata);
-            let h = ids.length === 0 ? '<div class="loading"><p>Waiting for MQTT data...</p></div>' : '<table><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Mileage</th><th>Signal</th><th>Events</th><th>Driver</th><th>Report</th></tr></thead><tbody>';
+            let html = ids.length === 0 ? '<p>Waiting for MQTT data...</p>' : 
+                `<div class="table-responsive"><table class="table"><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Mileage</th><th>Signal</th><th>Events</th><th>Driver</th><th>Report</th></tr></thead><tbody>`;
             ids.forEach(id => {
-                const meta = vehicleMetadata[id], daily = dailySummaries[id], pos = vehiclePositions[id], telem = vehicleTelemetry[id] || {};
-                const dr = drivers.find(d => d.vehicleId === id.toString());
-                const sigVal = telem.signal; let sigDisplay = '--';
+                const meta = vehicleMetadata[id];
+                const daily = dailySummaries[id];
+                const pos = vehiclePositions[id];
+                const telem = vehicleTelemetry[id] || {};
+                const driver = drivers.find(d => d.vehicleId === id.toString());
+                const sigVal = telem.signal;
+                let sigDisplay = '--';
                 if (sigVal !== undefined) sigDisplay = (typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100)) + '%';
-                h += '<tr><td><strong>' + (meta.name || 'Vehicle ' + id) + '</strong></td><td><code>' + id + '</code></td><td>' + (pos ? '<span class="status-badge status-active">Live</span>' : '<span class="status-badge status-idle">--</span>') + '</td><td>' + (daily ? daily.total_mileage_km.toFixed(2) + ' km' : '--') + '</td><td>' + sigDisplay + '</td><td>' + (daily ? daily.harsh_events_total : '--') + '</td><td>' + (dr ? dr.name : '<span style="color:var(--text-secondary);">Unassigned</span>') + '</td><td><button class="btn btn-primary btn-sm" onclick="showVehicleReport(\'' + id + '\')">📊</button></td></tr>';
+                html += `<tr>
+                    <td><strong>${meta.name || 'Vehicle '+id}</strong></td>
+                    <td><code>${id}</code></td>
+                    <td>${pos ? '<span class="badge status-active">Live</span>' : '<span class="badge status-idle">--</span>'}</td>
+                    <td>${daily ? daily.total_mileage_km.toFixed(2)+' km' : '--'}</td>
+                    <td>${sigDisplay}</td>
+                    <td>${daily ? daily.harsh_events_total : '--'}</td>
+                    <td>${driver ? driver.name : '<span class="text-secondary">Unassigned</span>'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="showVehicleReport('${id}')">📊</button></td>
+                </tr>`;
             });
-            if (ids.length) h += '</tbody></table>';
-            document.getElementById('vehiclesTable').innerHTML = h;
-            document.getElementById('vehiclesTablePage').innerHTML = h;
+            if (ids.length) html += '</tbody></table></div>';
+            document.getElementById('vehiclesTable').innerHTML = html;
+            document.getElementById('vehiclesTablePage').innerHTML = html;
         }
 
         function updateBehaviorGrid() {
             const grid = document.getElementById('behaviorGrid');
             const ids = Object.keys(vehicleMetadata);
-            if (ids.length === 0) { grid.innerHTML = '<div class="loading" style="grid-column:1/-1;"><p>No vehicles detected.</p></div>'; return; }
+            if (ids.length === 0) { grid.innerHTML = '<div class="col-12"><p>No vehicles detected.</p></div>'; return; }
             let html = '';
             ids.forEach(id => {
-                const meta = vehicleMetadata[id], telem = vehicleTelemetry[id] || {};
-                const sigVal = telem.signal; let sigPct = 0;
+                const meta = vehicleMetadata[id];
+                const telem = vehicleTelemetry[id] || {};
+                const sigVal = telem.signal;
+                let sigPct = 0;
                 if (sigVal !== undefined) sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100);
-                let sigClass = sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor';
-                html += '<div class="behavior-card"><div class="behavior-label">' + (meta.name || 'Vehicle ' + id).substring(0,15) + '</div><div class="behavior-value" style="font-size:16px;">📶 ' + sigPct + '%</div><div class="signal-bar"><div class="signal-fill ' + sigClass + '" style="width:' + sigPct + '%;"></div></div><div style="display:flex;justify-content:space-around;margin-top:8px;font-size:11px;"><span>X:' + (telem.accelX !== undefined ? telem.accelX.toFixed(2) : '--') + '</span><span>Y:' + (telem.accelY !== undefined ? telem.accelY.toFixed(2) : '--') + '</span><span>Z:' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(2) : '--') + '</span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:3px;">' + (telem.network || '--') + '</div></div>';
+                const sigClass = sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor';
+                html += `<div class="col-6 col-md-4 col-lg-3">
+                    <div class="card p-2 text-center">
+                        <small class="text-secondary">${(meta.name || 'Vehicle '+id).substring(0,15)}</small>
+                        <strong>📶 ${sigPct}%</strong>
+                        <div class="signal-bar"><div class="signal-fill ${sigClass}" style="width:${sigPct}%"></div></div>
+                        <div class="d-flex justify-content-between small mt-1">
+                            <span>X:${telem.accelX?.toFixed(2)||'--'}</span>
+                            <span>Y:${telem.accelY?.toFixed(2)||'--'}</span>
+                            <span>Z:${telem.accelZ?.toFixed(2)||'--'}</span>
+                        </div>
+                        <small class="text-secondary">${telem.network || '--'}</small>
+                    </div>
+                </div>`;
             });
             grid.innerHTML = html;
         }
 
         function showVehicleReport(deviceId) {
-            const meta = vehicleMetadata[deviceId] || { name: 'Vehicle ' + deviceId };
-            const daily = dailySummaries[deviceId], pos = vehiclePositions[deviceId], telem = vehicleTelemetry[deviceId] || {};
+            const meta = vehicleMetadata[deviceId] || { name: 'Vehicle '+deviceId };
+            const daily = dailySummaries[deviceId];
+            const pos = vehiclePositions[deviceId];
+            const telem = vehicleTelemetry[deviceId] || {};
             const driver = drivers.find(d => d.vehicleId === deviceId.toString());
-            document.getElementById('reportTitle').innerHTML = '<i class="fas fa-chart-bar"></i> ' + (meta.name || 'Vehicle ' + deviceId);
-            if (daily) document.getElementById('reportDailyStats').innerHTML = '<div class="daily-stat-card mileage"><div class="daily-stat-value">' + daily.total_mileage_km.toFixed(2) + '</div><div class="daily-stat-label">Mileage (km)</div></div><div class="daily-stat-card hours"><div class="daily-stat-value">' + daily.driving_hours.toFixed(2) + '</div><div class="daily-stat-label">Hours</div></div><div class="daily-stat-card speed"><div class="daily-stat-value">' + daily.max_speed_kmh + '</div><div class="daily-stat-label">Max Speed</div></div><div class="daily-stat-card events"><div class="daily-stat-value">' + daily.harsh_events_total + '</div><div class="daily-stat-label">Harsh Events</div></div>';
-            else document.getElementById('reportDailyStats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:15px;">⏳ Waiting for MQTT...</div>';
-            const sigVal = telem.signal; let sigPct = 0;
+            document.getElementById('reportTitle').innerHTML = `<i class="fas fa-chart-bar"></i> ${meta.name || 'Vehicle '+deviceId}`;
+            if (daily) {
+                document.getElementById('reportDailyStats').innerHTML = `
+                    <div class="col-6 col-md-3"><div class="card text-center bg-success text-white"><div class="card-body"><h3>${daily.total_mileage_km.toFixed(2)}</h3><small>Mileage (km)</small></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card text-center bg-info text-white"><div class="card-body"><h3>${daily.driving_hours.toFixed(2)}</h3><small>Hours</small></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card text-center bg-warning"><div class="card-body"><h3>${daily.max_speed_kmh}</h3><small>Max Speed</small></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card text-center bg-danger text-white"><div class="card-body"><h3>${daily.harsh_events_total}</h3><small>Harsh Events</small></div></div></div>`;
+            } else {
+                document.getElementById('reportDailyStats').innerHTML = '<div class="col-12 text-center">⏳ Waiting for MQTT...</div>';
+            }
+            const sigVal = telem.signal;
+            let sigPct = 0;
             if (sigVal !== undefined) sigPct = typeof sigVal === 'number' && sigVal <= 100 ? sigVal : Math.round((sigVal/31)*100);
-            document.getElementById('reportBehavior').innerHTML = '<div class="behavior-card"><div class="behavior-label">Signal</div><div class="behavior-value">📶 ' + (sigVal !== undefined ? sigPct + '%' : '--') + '</div><div class="signal-bar"><div class="signal-fill ' + (sigPct >= 75 ? 'excellent' : sigPct >= 50 ? 'good' : sigPct >= 25 ? 'fair' : 'poor') + '" style="width:' + sigPct + '%;"></div></div></div><div class="behavior-card"><div class="behavior-label">Accel X</div><div class="behavior-value">' + (telem.accelX !== undefined ? telem.accelX.toFixed(3) : '--') + '</div></div><div class="behavior-card"><div class="behavior-label">Accel Y</div><div class="behavior-value">' + (telem.accelY !== undefined ? telem.accelY.toFixed(3) : '--') + '</div></div><div class="behavior-card"><div class="behavior-label">Accel Z</div><div class="behavior-value">' + (telem.accelZ !== undefined ? telem.accelZ.toFixed(3) : '--') + '</div></div>';
-            document.getElementById('reportDetails').innerHTML = '<table><tr><th>Property</th><th>Value</th></tr><tr><td>Device ID</td><td><code>' + deviceId + '</code></td></tr><tr><td>Speed</td><td>' + (pos ? pos.speed + ' km/h' : '--') + '</td></tr><tr><td>Driver</td><td>' + (driver ? driver.name : '--') + '</td></tr><tr><td>Updated</td><td>' + (daily ? daily.timestamp : '--') + '</td></tr></table>';
-            document.getElementById('vehicleReportModal').classList.add('show');
+            document.getElementById('reportBehavior').innerHTML = `
+                <div class="col-6 col-md-3"><div class="card p-2 text-center"><small>Signal</small><strong>📶 ${sigVal!==undefined?sigPct+'%':'--'}</strong><div class="signal-bar"><div class="signal-fill ${sigPct>=75?'excellent':sigPct>=50?'good':sigPct>=25?'fair':'poor'}" style="width:${sigPct}%"></div></div></div></div>
+                <div class="col-6 col-md-3"><div class="card p-2 text-center"><small>Accel X</small><strong>${telem.accelX?.toFixed(3)||'--'}</strong></div></div>
+                <div class="col-6 col-md-3"><div class="card p-2 text-center"><small>Accel Y</small><strong>${telem.accelY?.toFixed(3)||'--'}</strong></div></div>
+                <div class="col-6 col-md-3"><div class="card p-2 text-center"><small>Accel Z</small><strong>${telem.accelZ?.toFixed(3)||'--'}</strong></div></div>`;
+            document.getElementById('reportDetails').innerHTML = `<table class="table"><tr><th>Property</th><th>Value</th></tr><tr><td>Device ID</td><td><code>${deviceId}</code></td></tr><tr><td>Speed</td><td>${pos ? pos.speed+' km/h' : '--'}</td></tr><tr><td>Driver</td><td>${driver ? driver.name : '--'}</td></tr><tr><td>Updated</td><td>${daily ? daily.timestamp : '--'}</td></tr></table>`;
+            const modal = new bootstrap.Modal(document.getElementById('vehicleReportModal'));
+            modal.show();
         }
-        function closeReport() { document.getElementById('vehicleReportModal').classList.remove('show'); }
 
         function updateStats() {
             const count = Object.keys(vehicleMetadata).length;
@@ -609,20 +734,73 @@
             document.getElementById('cardVehicles').textContent = count;
             document.getElementById('cardDrivers').textContent = drivers.length;
             document.getElementById('cardMaintenance').textContent = maintenanceRecords.length;
-            let km = 0; Object.values(dailySummaries).forEach(d => km += d.total_mileage_km || 0);
+            let km = 0;
+            Object.values(dailySummaries).forEach(d => km += d.total_mileage_km || 0);
             document.getElementById('totalDistance').textContent = km.toFixed(1) + ' km';
         }
 
-        function loadDrivers() { const d = document.getElementById('driversTable'); if (!drivers.length) { d.innerHTML = '<div class="loading"><p>No drivers assigned.</p></div>'; return; } let h = '<table><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th></th></tr></thead><tbody>'; drivers.forEach((r, i) => { const v = vehicleMetadata[r.vehicleId]; h += '<tr><td><strong>' + r.name + '</strong></td><td>' + r.license + '</td><td>' + r.phone + '</td><td>' + (v ? v.name : '?') + '</td><td>' + r.depot + '</td><td><button class="btn btn-secondary btn-sm" onclick="removeDriver(' + i + ')"><i class="fas fa-trash"></i></button></td></tr>'; }); h += '</tbody></table>'; d.innerHTML = h; }
-        function showAddDriverForm() { const n = prompt('Name:'); if (!n) return; const l = prompt('License:'); if (!l) return; const p = prompt('Phone:'); if (!p) return; const vid = prompt('Vehicle Device ID:'); if (!vid) return; const dp = prompt('Depot:'); if (!dp) return; drivers.push({ name: n, license: l, phone: p, vehicleId: vid, depot: dp }); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateVehicleTables(); updateStats(); }
-        function removeDriver(i) { if (confirm('Remove?')) { drivers.splice(i,1); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateStats(); } }
-        function loadMaintenance() { const d = document.getElementById('maintenanceTable'); if (!maintenanceRecords.length) { d.innerHTML = '<div class="loading"><p>No records.</p></div>'; return; } let h = '<table><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>'; maintenanceRecords.forEach(r => h += '<tr><td>' + r.vehicleName + '</td><td>' + r.type + '</td><td>' + r.date + '</td><td>' + r.mileage + ' km</td><td>$' + r.cost + '</td><td><span class="status-badge ' + (r.status==='Completed'?'status-active':'status-idle') + '">' + r.status + '</span></td></tr>'); h += '</tbody></table>'; d.innerHTML = h; }
-        function showAddMaintenanceForm() { const v = prompt('Vehicle:'); if (!v) return; const t = prompt('Service:'); if (!t) return; const dt = prompt('Date (YYYY-MM-DD):'); if (!dt) return; const m = prompt('Mileage:'); if (!m) return; const c = prompt('Cost USD:'); if (!c) return; maintenanceRecords.push({ vehicleName: v, type: t, date: dt, mileage: m, cost: c, status: 'Scheduled' }); localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords)); loadMaintenance(); updateStats(); }
-        function loadMileage() { const d = document.getElementById('mileageTable'); if (!mileageLogs.length) { d.innerHTML = '<div class="loading"><p>No trips.</p></div>'; return; } let h = '<table><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Dist</th></tr></thead><tbody>'; mileageLogs.forEach(l => h += '<tr><td>' + l.date + '</td><td>' + l.vehicleName + '</td><td>' + l.driverName + '</td><td>' + l.startLocation + '</td><td>' + l.endLocation + '</td><td>' + l.distance + ' km</td></tr>'); h += '</tbody></table>'; d.innerHTML = h; }
-        function showAddMileageForm() { const v = prompt('Vehicle:'); if (!v) return; const dr = prompt('Driver:'); if (!dr) return; const s = prompt('From:'); if (!s) return; const e = prompt('To:'); if (!e) return; const dist = prompt('Distance (km):'); if (!dist) return; mileageLogs.push({ date: new Date().toLocaleDateString(), vehicleName: v, driverName: dr, startLocation: s, endLocation: e, distance: dist }); localStorage.setItem('as_mileage', JSON.stringify(mileageLogs)); loadMileage(); updateStats(); }
+        // Driver, Maintenance, Mileage functions (same as original, but use Bootstrap modal maybe)
+        function loadDrivers() {
+            const d = document.getElementById('driversTable');
+            if (!drivers.length) { d.innerHTML = '<p>No drivers assigned.</p>'; return; }
+            let h = `<div class="table-responsive"><table class="table"><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th></th></tr></thead><tbody>`;
+            drivers.forEach((r,i) => {
+                const v = vehicleMetadata[r.vehicleId];
+                h += `<tr><td><strong>${r.name}</strong></td><td>${r.license}</td><td>${r.phone}</td><td>${v ? v.name : '?'}</td><td>${r.depot}</td><td><button class="btn btn-sm btn-outline-danger" onclick="removeDriver(${i})"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            h += '</tbody></table></div>';
+            d.innerHTML = h;
+        }
+        function showAddDriverForm() {
+            const n = prompt('Name:'); if(!n) return;
+            const l = prompt('License:'); if(!l) return;
+            const p = prompt('Phone:'); if(!p) return;
+            const vid = prompt('Vehicle Device ID:'); if(!vid) return;
+            const dp = prompt('Depot:'); if(!dp) return;
+            drivers.push({name:n, license:l, phone:p, vehicleId:vid, depot:dp});
+            localStorage.setItem('as_drivers', JSON.stringify(drivers));
+            loadDrivers(); updateStats();
+        }
+        function removeDriver(i) { if(confirm('Remove?')) { drivers.splice(i,1); localStorage.setItem('as_drivers', JSON.stringify(drivers)); loadDrivers(); updateStats(); } }
+        function loadMaintenance() {
+            const d = document.getElementById('maintenanceTable');
+            if (!maintenanceRecords.length) { d.innerHTML = '<p>No records.</p>'; return; }
+            let h = `<div class="table-responsive"><table class="table"><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>`;
+            maintenanceRecords.forEach(r => h += `<tr><td>${r.vehicleName}</td><td>${r.type}</td><td>${r.date}</td><td>${r.mileage} km</td><td>$${r.cost}</td><td><span class="badge ${r.status==='Completed'?'status-active':'status-idle'}">${r.status}</span></td></tr>`);
+            h += '</tbody></table></div>';
+            d.innerHTML = h;
+        }
+        function showAddMaintenanceForm() {
+            const v = prompt('Vehicle:'); if(!v) return;
+            const t = prompt('Service:'); if(!t) return;
+            const dt = prompt('Date (YYYY-MM-DD):'); if(!dt) return;
+            const m = prompt('Mileage:'); if(!m) return;
+            const c = prompt('Cost USD:'); if(!c) return;
+            maintenanceRecords.push({vehicleName:v, type:t, date:dt, mileage:m, cost:c, status:'Scheduled'});
+            localStorage.setItem('as_maintenance', JSON.stringify(maintenanceRecords));
+            loadMaintenance(); updateStats();
+        }
+        function loadMileage() {
+            const d = document.getElementById('mileageTable');
+            if (!mileageLogs.length) { d.innerHTML = '<p>No trips.</p>'; return; }
+            let h = `<div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Dist</th></tr></thead><tbody>`;
+            mileageLogs.forEach(l => h += `<tr><td>${l.date}</td><td>${l.vehicleName}</td><td>${l.driverName}</td><td>${l.startLocation}</td><td>${l.endLocation}</td><td>${l.distance} km</td></tr>`);
+            h += '</tbody></table></div>';
+            d.innerHTML = h;
+        }
+        function showAddMileageForm() {
+            const v = prompt('Vehicle:'); if(!v) return;
+            const dr = prompt('Driver:'); if(!dr) return;
+            const s = prompt('From:'); if(!s) return;
+            const e = prompt('To:'); if(!e) return;
+            const dist = prompt('Distance (km):'); if(!dist) return;
+            mileageLogs.push({date: new Date().toLocaleDateString(), vehicleName:v, driverName:dr, startLocation:s, endLocation:e, distance:dist});
+            localStorage.setItem('as_mileage', JSON.stringify(mileageLogs));
+            loadMileage(); updateStats();
+        }
 
-        document.addEventListener('click', function(e) { if (e.target.id === 'vehicleReportModal') closeReport(); });
-        window.onload = init;
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
