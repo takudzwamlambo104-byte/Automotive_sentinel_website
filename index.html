@@ -2,691 +2,488 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Automotive Sentinel · Fleet Intelligence</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Automotive Sentinel · Fleet Tracking</title>
+    <!-- Bootstrap 5 (only for modal, not grid) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Font Awesome 6 -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Google Fonts: Inter for UI, JetBrains Mono for telemetry -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-            --bg-deep: #0b0f19;
-            --bg-surface: #141a26;
-            --bg-card: #1b2333;
-            --border-color: #2a3344;
-            --text-primary: #eef2f6;
-            --text-secondary: #8892a6;
-            --accent: #0ea5ff;          /* bright blue */
-            --accent-light: #38bdf8;
-            --danger: #f43f5e;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --sidebar-bg: #0b0f19;
-            --sidebar-hover: #1e2837;
-            --shadow: 0 4px 16px rgba(0,0,0,0.4);
-            --radius: 12px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            width: 100%; height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: #0a0e14;
+            color: #e6edf3;
+            overflow: hidden;
         }
-        body {
-            font-family: var(--font-ui);
-            background: var(--bg-deep);
-            color: var(--text-primary);
-            overflow-x: hidden;
+        #map {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
         }
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 3px; }
-
-        /* Layout */
-        .app-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-        .sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
+        /* Top-left title */
+        .title-bar {
             position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            z-index: 1030;
-            transition: transform 0.3s ease;
-        }
-        .sidebar-brand {
-            padding: 1.5rem 1.2rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--accent);
-            letter-spacing: -0.5px;
-        }
-        .sidebar-brand i {
-            font-size: 1.8rem;
-            color: var(--accent-light);
-        }
-        .sidebar-nav {
-            flex: 1;
-            padding: 1rem 0;
-            overflow-y: auto;
-        }
-        .sidebar-nav .nav-item {
-            padding: 0.7rem 1.2rem;
-            margin: 0.15rem 0.8rem;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 500;
-            transition: all 0.2s;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .sidebar-nav .nav-item i {
-            width: 20px;
-            text-align: center;
-            font-size: 1rem;
-        }
-        .sidebar-nav .nav-item:hover {
-            background: var(--sidebar-hover);
-            color: white;
-        }
-        .sidebar-nav .nav-item.active {
-            background: rgba(14, 165, 255, 0.15);
-            color: var(--accent-light);
-            box-shadow: inset 3px 0 0 var(--accent);
-        }
-        .sidebar-footer {
-            padding: 1rem 1.2rem;
-            border-top: 1px solid var(--border-color);
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-        .main-content {
-            margin-left: 260px;
-            flex: 1;
-            padding: 1.5rem;
-            transition: margin-left 0.3s ease;
-        }
-        /* Top bar inside main */
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        .topbar h2 {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: white;
-        }
-        .stats-row {
-            display: flex;
-            gap: 1rem;
-        }
-        .stat-pill {
-            background: var(--bg-card);
+            top: 15px; left: 15px;
+            z-index: 1000;
+            background: rgba(10,14,20,0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
             border-radius: 30px;
-            padding: 0.3rem 1.2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #58a6ff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.9rem;
-            border: 1px solid var(--border-color);
         }
-        .stat-pill .value {
-            font-weight: 700;
-            color: var(--accent-light);
-            font-family: var(--font-mono);
+        .title-bar i { font-size: 1.2rem; }
+        .title-bar span { color: #fff; }
+        /* Top-right controls */
+        .controls {
+            position: fixed;
+            top: 15px; right: 15px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
         }
-        /* Cards */
-        .card-custom {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            transition: transform 0.2s;
+        .btn-ctrl {
+            background: rgba(10,14,20,0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            width: 42px; height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b949e;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .card-custom:hover { transform: translateY(-2px); }
-        .page { display: none; }
-        .page.active { display: block; }
-        /* Map & 3D containers */
-        .map-container {
-            height: 420px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
+        .btn-ctrl:hover { color: #fff; background: rgba(31,111,235,0.4); }
+        .btn-ctrl.active { color: #58a6ff; border-color: #58a6ff; }
+        /* Bottom device tray */
+        .tray {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 600px;
+            background: rgba(20,27,34,0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.7);
+            z-index: 1001;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 68px;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .three-container {
-            height: 420px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background: #0f1219;
+        .tray.open {
+            height: 380px;
         }
-        /* Tables */
-        .table-dark-custom {
-            width: 100%;
-            color: var(--text-primary);
+        .tray-handle {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 0 20px;
         }
-        .table-dark-custom th {
-            background: var(--bg-surface);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            border-bottom: 2px solid var(--border-color);
-            padding: 0.8rem 0.75rem;
-        }
-        .table-dark-custom td {
-            padding: 0.8rem 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .table-dark-custom tbody tr:hover td {
-            background: rgba(255,255,255,0.02);
-        }
-        .badge-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
+        .tray-handle .badge {
+            background: #1f6feb;
+            border-radius: 12px;
+            padding: 2px 10px;
             font-size: 0.75rem;
             font-weight: 600;
         }
-        .badge-live { background: rgba(16,185,129,0.2); color: #10b981; }
-        .badge-idle { background: rgba(245,158,11,0.2); color: #f59e0b; }
-        .signal-bar {
-            height: 6px; background: #2a3344; border-radius: 3px;
-            overflow: hidden; margin-top: 4px;
+        .tray-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px 12px;
         }
-        .signal-fill { height: 100%; border-radius: 3px; }
-        .signal-excellent { background: #10b981; }
-        .signal-good { background: #38bdf8; }
-        .signal-fair { background: #f59e0b; }
-        .signal-poor { background: #f43f5e; }
-
-        /* Offcanvas for mobile */
-        @media (max-width: 991.98px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .hamburger-btn {
-                display: inline-block !important;
-            }
+        .device-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 14px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.03);
+            cursor: pointer;
+            transition: background 0.2s;
         }
-        .hamburger-btn {
-            display: none;
+        .device-item:hover {
+            background: rgba(31,111,235,0.15);
+        }
+        .device-item.selected {
+            background: rgba(31,111,235,0.25);
+            border: 1px solid #58a6ff;
+        }
+        .device-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .device-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .device-detail {
+            font-size: 0.75rem;
+            color: #8b949e;
+            display: flex;
+            gap: 12px;
+        }
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+        }
+        .dot-live {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #238636;
+            box-shadow: 0 0 8px #238636;
+        }
+        .dot-offline {
+            background: #d2991d;
+            box-shadow: 0 0 8px #d2991d;
+        }
+        /* Telemetry panel (slides from right) */
+        .telemetry-panel {
+            position: fixed;
+            top: 0;
+            right: -380px;
+            width: 360px;
+            max-width: 85vw;
+            height: 100%;
+            background: rgba(20,27,34,0.97);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            z-index: 1002;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.6);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .telemetry-panel.open {
+            right: 0;
+        }
+        .panel-close {
+            align-self: flex-end;
             background: none;
             border: none;
-            color: white;
-            font-size: 1.6rem;
+            color: #8b949e;
+            font-size: 1.4rem;
+            cursor: pointer;
         }
-        /* Buttons */
-        .btn-accent {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            padding: 0.45rem 1.2rem;
+        .panel-header {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #58a6ff;
         }
-        .btn-accent:hover { background: #0284c7; }
-        .btn-outline-accent {
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            background: transparent;
-            border-radius: 8px;
-            padding: 0.4rem 1rem;
-        }
-        .btn-outline-accent:hover {
-            background: rgba(14,165,255,0.1);
-            color: white;
-        }
-        /* Telemetry cards */
         .telemetry-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 1rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
         }
-        .telemetry-item {
-            background: var(--bg-card);
-            padding: 1rem;
-            border-radius: var(--radius);
+        .telemetry-card {
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 14px;
             text-align: center;
-            border: 1px solid var(--border-color);
         }
-        .telemetry-item .value {
-            font-family: var(--font-mono);
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--accent-light);
+        .telemetry-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #58a6ff;
         }
-        .telemetry-item .label {
+        .telemetry-card .label {
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: var(--text-secondary);
+            color: #8b949e;
             margin-top: 4px;
         }
+        .signal-bar {
+            height: 6px;
+            background: #21262d;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .signal-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s;
+        }
+        /* Floating button to toggle telemetry */
+        .fab-telemetry {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #1f6feb;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 1003;
+            box-shadow: 0 4px 20px rgba(31,111,235,0.5);
+            transition: transform 0.2s;
+        }
+        .fab-telemetry:active { transform: scale(0.95); }
+        /* Custom pin marker style (injected via JS) */
+        .custom-pin {
+            width: 32px;
+            height: 50px;
+            position: relative;
+        }
+        .custom-pin .circle {
+            width: 24px;
+            height: 24px;
+            background: #1f6feb;
+            border-radius: 50%;
+            border: 3px solid white;
+            margin: 0 auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .custom-pin .point {
+            width: 0; height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 16px solid #1f6feb;
+            margin: -2px auto 0;
+        }
+        /* Scrollbar */
+        .tray-content::-webkit-scrollbar { width: 4px; }
+        .tray-content::-webkit-scrollbar-track { background: transparent; }
+        .tray-content::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div class="app-wrapper">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <i class="fas fa-satellite"></i>
-                <span>AUTOMOTIVE <span style="color: white;">SENTINEL</span></span>
-            </div>
-            <nav class="sidebar-nav">
-                <div class="nav-item active" onclick="navigate('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
-                <div class="nav-item" onclick="navigate('vehicles')"><i class="fas fa-truck"></i> Vehicles</div>
-                <div class="nav-item" onclick="navigate('drivers')"><i class="fas fa-id-card"></i> Drivers</div>
-                <div class="nav-item" onclick="navigate('depots')"><i class="fas fa-warehouse"></i> Depots</div>
-                <div class="nav-item" onclick="navigate('maintenance')"><i class="fas fa-tools"></i> Maintenance</div>
-                <div class="nav-item" onclick="navigate('mileage')"><i class="fas fa-road"></i> Mileage Log</div>
-                <div class="nav-item" onclick="navigate('behavior')"><i class="fas fa-gauge-high"></i> Driver Behavior</div>
-                <div class="nav-item" onclick="navigate('threed')"><i class="fas fa-cube"></i> 3D Tracker</div>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="mqtt-dot" id="mqttDot"></span>
-                    <small id="mqttStatus">connecting...</small>
-                </div>
-            </div>
-        </aside>
+    <!-- Map -->
+    <div id="map"></div>
 
-        <!-- Main -->
-        <main class="main-content" id="mainContent">
-            <button class="hamburger-btn mb-3" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-
-            <!-- DASHBOARD -->
-            <div class="page active" id="dashboard-page">
-                <div class="topbar">
-                    <h2><i class="fas fa-map-marked-alt me-2" style="color: var(--accent);"></i>Live Fleet Overview</h2>
-                    <div class="stats-row">
-                        <div class="stat-pill"><span class="value" id="totalVehicles">0</span><small>total</small></div>
-                        <div class="stat-pill"><span class="value" id="activeVehicles">0</span><small>active</small></div>
-                        <div class="stat-pill"><span class="value" id="totalDistance">0</span><small>km</small></div>
-                    </div>
-                </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-6 col-lg-3">
-                        <div class="card-custom p-3" onclick="navigate('vehicles')">
-                            <div class="d-flex justify-content-between"><small class="text-secondary">VEHICLES</small><i class="fas fa-truck" style="color:var(--accent)"></i></div>
-                            <h3 class="mt-2" id="cardVehicles">0</h3>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card-custom p-3" onclick="navigate('drivers')">
-                            <div class="d-flex justify-content-between"><small class="text-secondary">DRIVERS</small><i class="fas fa-users" style="color:var(--accent)"></i></div>
-                            <h3 class="mt-2" id="cardDrivers">0</h3>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card-custom p-3" onclick="navigate('depots')">
-                            <div class="d-flex justify-content-between"><small class="text-secondary">DEPOTS</small><i class="fas fa-warehouse" style="color:var(--accent)"></i></div>
-                            <h3 class="mt-2">3</h3>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card-custom p-3" onclick="navigate('maintenance')">
-                            <div class="d-flex justify-content-between"><small class="text-secondary">MAINTENANCE</small><i class="fas fa-tools" style="color:var(--accent)"></i></div>
-                            <h3 class="mt-2" id="cardMaintenance">0</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-custom p-3 mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <h5 class="mb-0"><i class="fas fa-map-pin"></i> Live Map</h5>
-                        <button class="btn-outline-accent btn-sm" onclick="toggleSatellite()" id="satelliteBtn">🛰️ Hybrid</button>
-                    </div>
-                    <div id="map" class="map-container"></div>
-                </div>
-                <div class="card-custom p-3">
-                    <h5 class="mb-3">Vehicle Status</h5>
-                    <div class="table-responsive" id="vehiclesTable"></div>
-                </div>
-            </div>
-
-            <!-- VEHICLES PAGE -->
-            <div class="page" id="vehicles-page">
-                <div class="topbar"><h2>All Vehicles</h2></div>
-                <div class="card-custom p-3"><div class="table-responsive" id="vehiclesTablePage"></div></div>
-            </div>
-
-            <!-- DRIVERS PAGE -->
-            <div class="page" id="drivers-page">
-                <div class="topbar"><h2>Drivers</h2><button class="btn-accent" onclick="showAddDriverForm()"><i class="fas fa-plus"></i> Assign</button></div>
-                <div class="card-custom p-3"><div id="driversTable"></div></div>
-            </div>
-
-            <!-- DEPOTS -->
-            <div class="page" id="depots-page">
-                <div class="topbar"><h2>Depot Locations</h2></div>
-                <div class="card-custom p-3">
-                    <div class="table-responsive">
-                        <table class="table-dark-custom">
-                            <thead><tr><th>Depot</th><th>Location</th><th>Vehicles</th><th>Contact</th><th>Status</th></tr></thead>
-                            <tbody>
-                                <tr><td>Harare Central</td><td>-17.8252, 31.0335</td><td>12</td><td>+263 242 123456</td><td><span class="badge badge-live">Active</span></td></tr>
-                                <tr><td>Bulawayo Depot</td><td>-20.1457, 28.5873</td><td>8</td><td>+263 292 654321</td><td><span class="badge badge-live">Active</span></td></tr>
-                                <tr><td>Mutare Branch</td><td>-18.9758, 32.6695</td><td>5</td><td>+263 202 789012</td><td><span class="badge badge-idle">Limited</span></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MAINTENANCE -->
-            <div class="page" id="maintenance-page">
-                <div class="topbar"><h2>Maintenance</h2><button class="btn-accent" onclick="showAddMaintenanceForm()"><i class="fas fa-plus"></i> Schedule</button></div>
-                <div class="card-custom p-3"><div id="maintenanceTable"></div></div>
-            </div>
-
-            <!-- MILEAGE -->
-            <div class="page" id="mileage-page">
-                <div class="topbar"><h2>Mileage Log</h2><button class="btn-accent" onclick="showAddMileageForm()"><i class="fas fa-plus"></i> Log Trip</button></div>
-                <div class="card-custom p-3"><div id="mileageTable"></div></div>
-            </div>
-
-            <!-- BEHAVIOR -->
-            <div class="page" id="behavior-page">
-                <div class="topbar"><h2>Driver Behavior</h2></div>
-                <div class="row g-3" id="behaviorGrid"></div>
-            </div>
-
-            <!-- 3D TRACKER -->
-            <div class="page" id="threed-page">
-                <div class="topbar"><h2>3D Vehicle Orientation</h2></div>
-                <div class="mb-3">
-                    <select class="form-select-sm bg-dark text-light border-secondary" id="threeVehicleSelect" onchange="switch3DVehicle()" style="width: 220px;">
-                        <option value="">-- Select vehicle --</option>
-                    </select>
-                    <span id="threeVehicleName" class="ms-2 fw-bold"></span>
-                </div>
-                <div id="three-container" class="three-container mb-3"></div>
-                <div class="telemetry-grid" id="threeTelemetry">
-                    <div class="telemetry-item"><div class="value" id="threeAccelX">0.00</div><div class="label">Accel X (g)</div></div>
-                    <div class="telemetry-item"><div class="value" id="threeAccelY">0.00</div><div class="label">Accel Y (g)</div></div>
-                    <div class="telemetry-item"><div class="value" id="threeAccelZ">0.00</div><div class="label">Accel Z (g)</div></div>
-                    <div class="telemetry-item"><div class="value" id="threePitch">0.0°</div><div class="label">Pitch</div></div>
-                    <div class="telemetry-item"><div class="value" id="threeRoll">0.0°</div><div class="label">Roll</div></div>
-                    <div class="telemetry-item"><div class="value" id="threeSignal">--</div><div class="label">Signal</div></div>
-                </div>
-            </div>
-        </main>
+    <!-- Title -->
+    <div class="title-bar">
+        <i class="fas fa-satellite"></i> AUTOMOTIVE <span>SENTINEL</span>
     </div>
 
-    <!-- Vehicle Report Modal -->
-    <div class="modal fade" id="vehicleReportModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content bg-dark text-light">
-                <div class="modal-header border-secondary"><h5 id="reportTitle">Report</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <div class="row g-2 mb-3" id="reportDailyStats"></div>
-                    <div class="row g-2" id="reportBehavior"></div>
-                    <div class="mt-3" id="reportDetails"></div>
-                </div>
-            </div>
+    <!-- Top-right controls -->
+    <div class="controls">
+        <div class="btn-ctrl" id="satelliteBtn" onclick="toggleSatellite()" title="Toggle hybrid map">
+            <i class="fas fa-layer-group"></i>
         </div>
+        <div class="btn-ctrl" onclick="toggleTelemetry()" id="telemetryToggle" title="Telemetry panel">
+            <i class="fas fa-chart-line"></i>
+        </div>
+    </div>
+
+    <!-- Bottom device tray -->
+    <div class="tray" id="deviceTray">
+        <div class="tray-handle" onclick="toggleTray()">
+            <i class="fas fa-chevron-up" id="trayIcon" style="transition: transform 0.3s;"></i>
+            <span id="trayTitle">Vehicles</span>
+            <span class="badge" id="trayCount">0</span>
+        </div>
+        <div class="tray-content" id="trayContent">
+            <!-- Device list injected here -->
+        </div>
+    </div>
+
+    <!-- Telemetry panel (right slide) -->
+    <div class="telemetry-panel" id="telemetryPanel">
+        <button class="panel-close" onclick="toggleTelemetry()">&times;</button>
+        <div class="panel-header" id="panelTitle">Select a vehicle</div>
+        <div class="telemetry-grid" id="telemetryGrid">
+            <div class="telemetry-card"><div class="value" id="telSpeed">0</div><div class="label">Speed (km/h)</div></div>
+            <div class="telemetry-card"><div class="value" id="telMileage">0</div><div class="label">Mileage (km)</div></div>
+            <div class="telemetry-card"><div class="value" id="telEvents">0</div><div class="label">Harsh Events</div></div>
+            <div class="telemetry-card">
+                <div class="value" id="telSignal">--</div>
+                <div class="label">Signal</div>
+                <div class="signal-bar"><div class="signal-fill" id="signalFill" style="width:0%; background:#58a6ff;"></div></div>
+            </div>
+            <div class="telemetry-card"><div class="value" id="telAccelX">0</div><div class="label">Accel X (g)</div></div>
+            <div class="telemetry-card"><div class="value" id="telAccelY">0</div><div class="label">Accel Y (g)</div></div>
+        </div>
+        <div id="telExtra" class="text-secondary small"></div>
+    </div>
+
+    <!-- FAB to toggle telemetry on mobile -->
+    <div class="fab-telemetry d-md-none" onclick="toggleTelemetry()">
+        <i class="fas fa-info"></i>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // ---- Configuration ----
         const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
         const MQTT_BROKER = 'wss://mqtt.flespi.io:443';
         const API_BASE = 'https://flespi.io/gw';
 
-        // ---- State ----
         let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
         let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
         let vehicleMetadata = {}, vehicleTelemetry = {};
-        let drivers = JSON.parse(localStorage.getItem('as_drivers') || '[]');
-        let maintenanceRecords = JSON.parse(localStorage.getItem('as_maintenance') || '[]');
-        let mileageLogs = JSON.parse(localStorage.getItem('as_mileage') || '[]');
-        let selected3DVehicle = null;
-        let threeScene, threeCamera, threeRenderer, threeModel;
+        let selectedVehicleId = null;
+        let trayOpen = false;
 
-        // ---- Sidebar toggle ----
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show'); }
-
-        // ---- Navigation ----
-        function navigate(page) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(page + '-page').classList.add('active');
-            const links = document.querySelectorAll('.sidebar-nav .nav-item');
-            links.forEach(link => {
-                if (link.textContent.toLowerCase().includes(page.replace('-',' ')) || (page==='dashboard' && link.textContent.includes('Dashboard')))
-                    link.classList.add('active');
-            });
-            if (page === 'drivers') loadDrivers();
-            if (page === 'maintenance') loadMaintenance();
-            if (page === 'mileage') loadMileage();
-            if (page === 'behavior') updateBehaviorGrid();
-            if (page === 'threed') init3DScene();
-            // On mobile, hide sidebar after nav
-            document.getElementById('sidebar').classList.remove('show');
-        }
-
-        // ---- Map init ----
+        // ---- Map ----
         function initMap() {
             satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
-            labelLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.6 });
+            labelLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.7 });
             hybridGroup = L.layerGroup([satelliteLayer, labelLayer]);
             const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 18 });
-            map = L.map('map', { center: [-17.8252, 31.0335], zoom: 7, layers: [street] });
-            [{ name:'Harare Central', lat:-17.8252, lng:31.0335 }, { name:'Bulawayo Depot', lat:-20.1457, lng:28.5873 }, { name:'Mutare Branch', lat:-18.9758, lng:32.6695 }].forEach(d => {
-                L.marker([d.lat, d.lng], { icon: L.divIcon({ html: '<div style="background:#0ea5ff;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.6);"><i class="fas fa-warehouse"></i></div>', iconSize:[28,28], iconAnchor:[14,14] }) }).addTo(map).bindPopup(`<b>${d.name}</b><br>Depot`);
+            map = L.map('map', { center: [-17.8252, 31.0335], zoom: 7, layers: [street], zoomControl: false });
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Depot markers (subtle)
+            const depots = [
+                { name: 'Harare Central', lat: -17.8252, lng: 31.0335 },
+                { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 },
+                { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }
+            ];
+            depots.forEach(d => {
+                L.circleMarker([d.lat, d.lng], {
+                    radius: 6, fillColor: '#1f6feb', color: '#fff', weight: 2, fillOpacity: 0.9
+                }).addTo(map).bindTooltip(d.name, { permanent: false, direction: 'top' });
             });
         }
 
         function toggleSatellite() {
             isSatellite = !isSatellite;
-            if (isSatellite) { map.addLayer(hybridGroup); document.getElementById('satelliteBtn').classList.add('active'); }
-            else { map.removeLayer(hybridGroup); document.getElementById('satelliteBtn').classList.remove('active'); }
+            const btn = document.getElementById('satelliteBtn');
+            if (isSatellite) {
+                map.addLayer(hybridGroup);
+                btn.classList.add('active');
+            } else {
+                map.removeLayer(hybridGroup);
+                btn.classList.remove('active');
+            }
         }
 
-        // ---- 3D Scene ----
-        function init3DScene() {
-            if (threeScene) { update3DVehicleSelect(); return; }
-            const container = document.getElementById('three-container');
-            threeScene = new THREE.Scene(); threeScene.background = new THREE.Color(0x0f1219);
-            threeCamera = new THREE.PerspectiveCamera(60, container.clientWidth/container.clientHeight, 0.1, 1000);
-            threeCamera.position.set(3,2.5,5); threeCamera.lookAt(0,0,0);
-            threeRenderer = new THREE.WebGLRenderer({ antialias:true });
-            threeRenderer.setSize(container.clientWidth, container.clientHeight);
-            container.appendChild(threeRenderer.domElement);
-            // Car model
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2.5,0.3,1.5), new THREE.MeshStandardMaterial({ color:0x0ea5ff, roughness:0.3, metalness:0.6 }));
-            threeModel = body; threeScene.add(body);
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.2,0.25,1.3), new THREE.MeshStandardMaterial({ color:0x0284c7, roughness:0.2 }));
-            cabin.position.set(0.3,0.27,0); body.add(cabin);
-            const wheelGeo = new THREE.CylinderGeometry(0.22,0.22,0.15,16);
-            const wheelMat = new THREE.MeshStandardMaterial({ color:0x111111, roughness:0.8 });
-            [[-0.8,-0.22,0.75],[0.8,-0.22,0.75],[-0.8,-0.22,-0.75],[0.8,-0.22,-0.75]].forEach(p => {
-                const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z=Math.PI/2; w.position.set(...p); body.add(w);
+        // ---- Custom Pin Marker ----
+        function createPinIcon() {
+            return L.divIcon({
+                className: '',
+                html: `<div class="custom-pin"><div class="circle"></div><div class="point"></div></div>`,
+                iconSize: [32, 50],
+                iconAnchor: [16, 48],
+                popupAnchor: [0, -40]
             });
-            const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.15,0.4,8), new THREE.MeshStandardMaterial({ color:0xf43f5e }));
-            arrow.position.set(1.4,0,0); arrow.rotation.z=-Math.PI/2; body.add(arrow);
-            threeScene.add(new THREE.GridHelper(8,20,0x333333,0x1e2837));
-            threeScene.add(new THREE.AmbientLight(0xffffff,0.5));
-            const dLight = new THREE.DirectionalLight(0xffffff,0.8); dLight.position.set(5,10,5); threeScene.add(dLight);
-            threeScene.add(new THREE.DirectionalLight(0x0ea5ff,0.3));
-            let isDragging=false, prev={x:0,y:0};
-            container.addEventListener('mousedown', e => { isDragging=true; prev={x:e.clientX,y:e.clientY}; });
-            container.addEventListener('mouseup',()=>isDragging=false);
-            container.addEventListener('mousemove',e=>{ if(!isDragging)return; body.rotation.y+=(e.clientX-prev.x)*0.005; threeCamera.position.y+=(e.clientY-prev.y)*0.02; threeCamera.position.y=Math.max(1,Math.min(8,threeCamera.position.y)); threeCamera.lookAt(body.position); prev={x:e.clientX,y:e.clientY}; });
-            container.addEventListener('wheel',e=>{ threeCamera.position.z+=e.deltaY*0.01; threeCamera.position.z=Math.max(2,Math.min(15,threeCamera.position.z)); threeCamera.lookAt(body.position); });
-            window.addEventListener('resize',()=>{ if(!threeCamera)return; const c=document.getElementById('three-container'); threeCamera.aspect=c.clientWidth/c.clientHeight; threeCamera.updateProjectionMatrix(); threeRenderer.setSize(c.clientWidth,c.clientHeight); });
-            (function animate(){ requestAnimationFrame(animate); if(threeRenderer) threeRenderer.render(threeScene,threeCamera); })();
-            update3DVehicleSelect();
         }
 
-        function update3DVehicleSelect() {
-            const sel = document.getElementById('threeVehicleSelect');
-            sel.innerHTML = '<option value="">-- Select --</option>';
-            Object.keys(vehicleMetadata).forEach(id => sel.innerHTML += `<option value="${id}">${vehicleMetadata[id].name||'Vehicle '+id} (${id})</option>`);
+        // ---- Tray ----
+        function toggleTray() {
+            const tray = document.getElementById('deviceTray');
+            trayOpen = !trayOpen;
+            if (trayOpen) {
+                tray.classList.add('open');
+                document.getElementById('trayIcon').style.transform = 'rotate(180deg)';
+            } else {
+                tray.classList.remove('open');
+                document.getElementById('trayIcon').style.transform = 'rotate(0deg)';
+            }
         }
-        function switch3DVehicle() {
-            selected3DVehicle = document.getElementById('threeVehicleSelect').value || null;
-            document.getElementById('threeVehicleName').textContent = selected3DVehicle ? ' - '+(vehicleMetadata[selected3DVehicle]?.name||'Vehicle '+selected3DVehicle) : '';
-            update3DTelemetry();
+
+        // ---- Telemetry Panel ----
+        function toggleTelemetry() {
+            const panel = document.getElementById('telemetryPanel');
+            panel.classList.toggle('open');
         }
-        function update3DTelemetry() {
-            if (!selected3DVehicle) return;
-            const t = vehicleTelemetry[selected3DVehicle] || {};
-            document.getElementById('threeAccelX').textContent = (t.accelX||0).toFixed(3);
-            document.getElementById('threeAccelY').textContent = (t.accelY||0).toFixed(3);
-            document.getElementById('threeAccelZ').textContent = (t.accelZ||0).toFixed(3);
-            const pitch = Math.atan2(t.accelX||0, Math.sqrt((t.accelY||0)**2+(t.accelZ||0)**2));
-            const roll = Math.atan2(t.accelY||0, Math.max(t.accelZ||0,0.1));
-            document.getElementById('threePitch').textContent = (pitch*(180/Math.PI)).toFixed(1)+'°';
-            document.getElementById('threeRoll').textContent = (roll*(180/Math.PI)).toFixed(1)+'°';
-            const sig = t.signal;
-            document.getElementById('threeSignal').textContent = sig!==undefined ? (typeof sig==='number'&&sig<=100?sig+'%':sig) : '--';
-            if (threeModel) { threeModel.rotation.x = roll; threeModel.rotation.z = -pitch; }
+
+        function updateTelemetryPanel(id) {
+            if (!id) {
+                document.getElementById('panelTitle').textContent = 'Select a vehicle';
+                document.getElementById('telSpeed').textContent = '0';
+                document.getElementById('telMileage').textContent = '0';
+                document.getElementById('telEvents').textContent = '0';
+                document.getElementById('telSignal').textContent = '--';
+                document.getElementById('signalFill').style.width = '0%';
+                document.getElementById('telAccelX').textContent = '0';
+                document.getElementById('telAccelY').textContent = '0';
+                document.getElementById('telExtra').innerHTML = '';
+                return;
+            }
+            const meta = vehicleMetadata[id] || { name: 'Vehicle ' + id };
+            const pos = vehiclePositions[id];
+            const daily = dailySummaries[id];
+            const telem = vehicleTelemetry[id] || {};
+            document.getElementById('panelTitle').textContent = meta.name;
+            document.getElementById('telSpeed').textContent = pos ? pos.speed.toFixed(1) : '0';
+            document.getElementById('telMileage').textContent = daily ? daily.total_mileage_km.toFixed(1) : '0';
+            document.getElementById('telEvents').textContent = daily ? daily.harsh_events_total : '0';
+            let sigVal = telem.signal;
+            let sigPct = 0;
+            if (sigVal !== undefined) {
+                sigPct = (typeof sigVal === 'number' && sigVal <= 100) ? sigVal : Math.round((sigVal / 31) * 100);
+            }
+            document.getElementById('telSignal').textContent = sigPct + '%';
+            document.getElementById('signalFill').style.width = sigPct + '%';
+            document.getElementById('telAccelX').textContent = (telem.accelX || 0).toFixed(3);
+            document.getElementById('telAccelY').textContent = (telem.accelY || 0).toFixed(3);
+            document.getElementById('telExtra').innerHTML = `
+                <small>Updated: ${daily ? daily.timestamp : '--'}</small><br>
+                <small>ID: ${id}</small>
+            `;
+        }
+
+        function selectVehicle(id) {
+            selectedVehicleId = id;
+            // Highlight in tray
+            document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
+            const item = document.querySelector(`.device-item[data-id="${id}"]`);
+            if (item) item.classList.add('selected');
+            // Fly to marker
+            const pos = vehiclePositions[id];
+            if (pos) {
+                map.flyTo([pos.lat, pos.lng], 15, { duration: 0.8 });
+                if (vehicleMarkers[id]) vehicleMarkers[id].openPopup();
+            }
+            // Update telemetry panel and open it
+            updateTelemetryPanel(id);
+            document.getElementById('telemetryPanel').classList.add('open');
         }
 
         // ---- MQTT & Data ----
-        function setMQTTStatus(s,c) { document.getElementById('mqttStatus').textContent=s; const dot=document.getElementById('mqttDot'); dot.style.background=c; dot.className='mqtt-dot'+(s==='connected'?' connected':''); }
-        function storeTelemetry(id,key,val) {
-            if(!vehicleTelemetry[id]) vehicleTelemetry[id]={};
-            vehicleTelemetry[id][key]=val;
-            updateBehaviorGrid();
-            if(selected3DVehicle===id) update3DTelemetry();
-            if(!vehicleMetadata[id]) { vehicleMetadata[id]={name:'Vehicle '+id, id}; updateStats(); updateVehicleTables(); update3DVehicleSelect(); }
-        }
-        function handlePosition(id,data) {
-            const lat=data['position.latitude']||data.latitude, lng=data['position.longitude']||data.longitude;
-            if(lat&&lng) {
-                vehiclePositions[id]={lat,lng,speed:data['position.speed']||data.speed||0, timestamp:new Date().toLocaleTimeString()};
-                if(!vehicleMetadata[id]) { vehicleMetadata[id]={name:data['device.name']||('Vehicle '+id), id}; updateStats(); updateVehicleTables(); update3DVehicleSelect(); }
-                updateMarker(id);
-            }
-        }
-        function handleSummary(id,data) {
-            dailySummaries[id]={ total_mileage_km:data.total_mileage_km||0, driving_hours:data.driving_hours||0, max_speed_kmh:data.max_speed_kmh||0, harsh_events_total:data.harsh_events_total||0, date:data.date||'', timestamp:new Date().toLocaleTimeString() };
-            if(!vehicleMetadata[id]) { vehicleMetadata[id]={name:'Vehicle '+id, id}; updateStats(); update3DVehicleSelect(); }
-            updateVehicleTables(); updateStats();
-        }
-        function updateMarker(id) {
-            const p=vehiclePositions[id]; if(!p) return;
-            const meta=vehicleMetadata[id]||{name:'Vehicle '+id}, daily=dailySummaries[id], telem=vehicleTelemetry[id]||{};
-            let popup=`<b>${meta.name}</b><br>🚀 ${p.speed} km/h`;
-            if(daily) popup+=`<br><small>📅 ${daily.date} | 🛣️ ${daily.total_mileage_km.toFixed(2)} km</small>`;
-            const sig=telem.signal;
-            if(sig!==undefined) popup+=`<br><small>📶 Signal: ${typeof sig==='number'&&sig<=100?sig+'%':sig}</small>`;
-            popup+=`<br><button class="btn btn-sm btn-accent mt-1" onclick="showVehicleReport('${id}')">📊 Report</button>`;
-            if(vehicleMarkers[id]) vehicleMarkers[id].setLatLng([p.lat,p.lng]).setPopupContent(popup);
-            else vehicleMarkers[id]=L.marker([p.lat,p.lng],{ icon:L.divIcon({ html:'<div style="width:14px;height:14px;background:#0ea5ff;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.6);"></div>', iconSize:[20,20], iconAnchor:[10,10] }) }).addTo(map).bindPopup(popup);
-        }
-
-        function updateVehicleTables() {
-            const ids=Object.keys(vehicleMetadata);
-            let h=ids.length?'<table class="table-dark-custom"><thead><tr><th>Vehicle</th><th>ID</th><th>Status</th><th>Mileage</th><th>Signal</th><th>Events</th><th>Driver</th><th></th></tr></thead><tbody>':'<p class="text-center py-3">Waiting for MQTT data...</p>';
-            ids.forEach(id=>{
-                const meta=vehicleMetadata[id], daily=dailySummaries[id], pos=vehiclePositions[id], telem=vehicleTelemetry[id]||{};
-                const dr=drivers.find(d=>d.vehicleId===id.toString());
-                const sigVal=telem.signal; let sigDisp='--';
-                if(sigVal!==undefined) sigDisp=(typeof sigVal==='number'&&sigVal<=100?sigVal:Math.round((sigVal/31)*100))+'%';
-                h+=`<tr><td><strong>${meta.name}</strong></td><td><code>${id}</code></td><td>${pos?'<span class="badge badge-live">Live</span>':'<span class="badge badge-idle">Offline</span>'}</td><td>${daily?daily.total_mileage_km.toFixed(2)+' km':'--'}</td><td>${sigDisp}</td><td>${daily?daily.harsh_events_total:'--'}</td><td>${dr?dr.name:'<span class="text-secondary">Unassigned</span>'}</td><td><button class="btn-accent btn-sm" onclick="showVehicleReport('${id}')">📊</button></td></tr>`;
-            });
-            if(ids.length) h+='</tbody></table>';
-            document.getElementById('vehiclesTable').innerHTML=h;
-            document.getElementById('vehiclesTablePage').innerHTML=h;
-        }
-
-        function updateBehaviorGrid() {
-            const grid=document.getElementById('behaviorGrid');
-            const ids=Object.keys(vehicleMetadata);
-            if(!ids.length){ grid.innerHTML='<div class="col-12 text-center py-3">No vehicles detected.</div>'; return; }
-            let h='';
-            ids.forEach(id=>{
-                const meta=vehicleMetadata[id], telem=vehicleTelemetry[id]||{};
-                const sigVal=telem.signal; let sigPct=0;
-                if(sigVal!==undefined) sigPct=typeof sigVal==='number'&&sigVal<=100?sigVal:Math.round((sigVal/31)*100);
-                const cls=sigPct>=75?'signal-excellent':sigPct>=50?'signal-good':sigPct>=25?'signal-fair':'signal-poor';
-                h+=`<div class="col-6 col-md-4 col-lg-3"><div class="card-custom p-3 text-center">
-                    <small class="text-secondary">${(meta.name||'Vehicle '+id).substring(0,15)}</small>
-                    <div class="fw-bold mt-1">📶 ${sigPct}%</div>
-                    <div class="signal-bar"><div class="signal-fill ${cls}" style="width:${sigPct}%"></div></div>
-                    <div class="d-flex justify-content-between small mt-2">
-                        <span>X:${telem.accelX?.toFixed(2)||'--'}</span><span>Y:${telem.accelY?.toFixed(2)||'--'}</span><span>Z:${telem.accelZ?.toFixed(2)||'--'}</span>
-                    </div>
-                    <small class="text-secondary">${telem.network||'--'}</small>
-                </div></div>`;
-            });
-            grid.innerHTML=h;
-        }
-
-        function showVehicleReport(id) {
-            const meta=vehicleMetadata[id]||{name:'Vehicle '+id}, daily=dailySummaries[id], pos=vehiclePositions[id], telem=vehicleTelemetry[id]||{};
-            const driver=drivers.find(d=>d.vehicleId===id.toString());
-            document.getElementById('reportTitle').innerHTML=`<i class="fas fa-chart-bar"></i> ${meta.name}`;
-            if(daily) document.getElementById('reportDailyStats').innerHTML=`
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><h5>${daily.total_mileage_km.toFixed(2)}</h5><small>Mileage (km)</small></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><h5>${daily.driving_hours.toFixed(2)}</h5><small>Hours</small></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><h5>${daily.max_speed_kmh}</h5><small>Max Speed</small></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><h5>${daily.harsh_events_total}</h5><small>Harsh Events</small></div></div>`;
-            else document.getElementById('reportDailyStats').innerHTML='<div class="col-12 text-center">⏳ Waiting...</div>';
-            const sigVal=telem.signal; let sigPct=0;
-            if(sigVal!==undefined) sigPct=typeof sigVal==='number'&&sigVal<=100?sigVal:Math.round((sigVal/31)*100);
-            document.getElementById('reportBehavior').innerHTML=`
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><small>Signal</small><h5>📶 ${sigVal!==undefined?sigPct+'%':'--'}</h5></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><small>Accel X</small><h5>${telem.accelX?.toFixed(3)||'--'}</h5></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><small>Accel Y</small><h5>${telem.accelY?.toFixed(3)||'--'}</h5></div></div>
-                <div class="col-6 col-md-3"><div class="card-custom p-2 text-center"><small>Accel Z</small><h5>${telem.accelZ?.toFixed(3)||'--'}</h5></div></div>`;
-            document.getElementById('reportDetails').innerHTML=`<table class="table-dark-custom"><tr><th>Property</th><th>Value</th></tr><tr><td>Device ID</td><td><code>${id}</code></td></tr><tr><td>Speed</td><td>${pos?pos.speed+' km/h':'--'}</td></tr><tr><td>Driver</td><td>${driver?driver.name:'--'}</td></tr><tr><td>Updated</td><td>${daily?daily.timestamp:'--'}</td></tr></table>`;
-            new bootstrap.Modal(document.getElementById('vehicleReportModal')).show();
-        }
-
-        function updateStats() {
-            const count=Object.keys(vehicleMetadata).length;
-            document.getElementById('totalVehicles').textContent=count;
-            document.getElementById('activeVehicles').textContent=Object.keys(vehiclePositions).length;
-            document.getElementById('cardVehicles').textContent=count;
-            document.getElementById('cardDrivers').textContent=drivers.length;
-            document.getElementById('cardMaintenance').textContent=maintenanceRecords.length;
-            let km=0; Object.values(dailySummaries).forEach(d=>km+=d.total_mileage_km||0);
-            document.getElementById('totalDistance').textContent=km.toFixed(1)+' km';
-        }
-
-        async function fetchInitialData() {
-            try {
-                const resp=await fetch(API_BASE+'/devices/all',{headers:{'Authorization':'FlespiToken '+FLESPI_TOKEN}});
-                const data=await resp.json();
-                (data.result||[]).forEach(d=>{ if(!vehicleMetadata[d.id]) vehicleMetadata[d.id]={name:d.name,id:d.id}; });
-                updateStats(); updateVehicleTables(); update3DVehicleSelect();
-            } catch(e){}
+        function setMQTTStatus(status, color) {
+            // Could add a small indicator, but not needed now
         }
 
         function connectMQTT() {
-            setMQTTStatus('connecting','#f59e0b');
-            mqttClient=mqtt.connect(MQTT_BROKER,{username:FLESPI_TOKEN,password:'',clientId:'sentinel_'+Math.random().toString(16).substr(2,8),clean:true,reconnectPeriod:5000});
-            mqttClient.on('connect',()=>{
-                setMQTTStatus('connected','#10b981');
+            mqttClient = mqtt.connect(MQTT_BROKER, {
+                username: FLESPI_TOKEN, password: '',
+                clientId: 'sentinel_' + Math.random().toString(16).substr(2, 8),
+                clean: true, reconnectPeriod: 5000
+            });
+            mqttClient.on('connect', () => {
+                setMQTTStatus('connected', '#238636');
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position');
                 mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last');
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.x');
@@ -698,43 +495,141 @@
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/modem.signal_quality');
                 mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/network.type');
             });
-            mqttClient.on('message',(topic,payload)=>{
-                try{
-                    const data=JSON.parse(payload.toString()), parts=topic.split('/'), deviceId=parts[4];
-                    const value=data.value!==undefined?data.value:data;
-                    if(topic.includes('/telemetry/position')&&!topic.includes('signal')) handlePosition(deviceId,data);
-                    else if(topic.includes('/calcs/')&&topic.endsWith('/last')) handleSummary(parts[6],data);
-                    else if(topic.includes('acceleration.x')) storeTelemetry(deviceId,'accelX',value);
-                    else if(topic.includes('acceleration.y')) storeTelemetry(deviceId,'accelY',value);
-                    else if(topic.includes('acceleration.z')) storeTelemetry(deviceId,'accelZ',value);
-                    else if(topic.includes('gsm.signal.level')||topic.includes('/sig')||topic.includes('position.signal')||topic.includes('modem.signal_quality')){
-                        let sv=value; if(typeof sv==='number'&&sv<=31) sv=Math.round((sv/31)*100);
-                        storeTelemetry(deviceId,'signal',sv);
+            mqttClient.on('message', (topic, payload) => {
+                try {
+                    const data = JSON.parse(payload.toString());
+                    const parts = topic.split('/'), deviceId = parts[4];
+                    const value = data.value !== undefined ? data.value : data;
+                    if (topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
+                    else if (topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
+                    else if (topic.includes('acceleration.x')) storeTelemetry(deviceId, 'accelX', value);
+                    else if (topic.includes('acceleration.y')) storeTelemetry(deviceId, 'accelY', value);
+                    else if (topic.includes('acceleration.z')) storeTelemetry(deviceId, 'accelZ', value);
+                    else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
+                        let sv = value;
+                        if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
+                        storeTelemetry(deviceId, 'signal', sv);
                     }
-                    else if(topic.includes('network.type')) storeTelemetry(deviceId,'network',value);
-                    if(selected3DVehicle===deviceId) update3DTelemetry();
-                }catch(e){}
+                    else if (topic.includes('network.type')) storeTelemetry(deviceId, 'network', value);
+                } catch (e) {}
             });
-            mqttClient.on('error',()=>setMQTTStatus('error','#f43f5e'));
-            mqttClient.on('close',()=>setMQTTStatus('disconnected','#f43f5e'));
+            mqttClient.on('error', () => setMQTTStatus('error', '#f85149'));
+            mqttClient.on('close', () => setMQTTStatus('disconnected', '#f85149'));
         }
 
-        // Driver/Maintenance/Mileage (same logic)
-        function loadDrivers(){ const d=document.getElementById('driversTable'); if(!drivers.length){ d.innerHTML='<p>No drivers assigned.</p>'; return; } let h='<table class="table-dark-custom"><thead><tr><th>Driver</th><th>License</th><th>Phone</th><th>Vehicle</th><th>Depot</th><th></th></tr></thead><tbody>'; drivers.forEach((r,i)=>{ const v=vehicleMetadata[r.vehicleId]; h+=`<tr><td><strong>${r.name}</strong></td><td>${r.license}</td><td>${r.phone}</td><td>${v?v.name:'?'}</td><td>${r.depot}</td><td><button class="btn btn-sm btn-outline-danger" onclick="removeDriver(${i})"><i class="fas fa-trash"></i></button></td></tr>`; }); h+='</tbody></table>'; d.innerHTML=h; }
-        function showAddDriverForm(){ const n=prompt('Name:'); if(!n)return; const l=prompt('License:'); if(!l)return; const p=prompt('Phone:'); if(!p)return; const vid=prompt('Vehicle Device ID:'); if(!vid)return; const dp=prompt('Depot:'); if(!dp)return; drivers.push({name:n,license:l,phone:p,vehicleId:vid,depot:dp}); localStorage.setItem('as_drivers',JSON.stringify(drivers)); loadDrivers(); updateStats(); }
-        function removeDriver(i){ if(confirm('Remove?')){ drivers.splice(i,1); localStorage.setItem('as_drivers',JSON.stringify(drivers)); loadDrivers(); updateStats(); } }
-        function loadMaintenance(){ const d=document.getElementById('maintenanceTable'); if(!maintenanceRecords.length){ d.innerHTML='<p>No records.</p>'; return; } let h='<table class="table-dark-custom"><thead><tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Mileage</th><th>Cost</th><th>Status</th></tr></thead><tbody>'; maintenanceRecords.forEach(r=>h+=`<tr><td>${r.vehicleName}</td><td>${r.type}</td><td>${r.date}</td><td>${r.mileage} km</td><td>$${r.cost}</td><td><span class="badge ${r.status==='Completed'?'badge-live':'badge-idle'}">${r.status}</span></td></tr>`); h+='</tbody></table>'; d.innerHTML=h; }
-        function showAddMaintenanceForm(){ const v=prompt('Vehicle:'); if(!v)return; const t=prompt('Service:'); if(!t)return; const dt=prompt('Date (YYYY-MM-DD):'); if(!dt)return; const m=prompt('Mileage:'); if(!m)return; const c=prompt('Cost USD:'); if(!c)return; maintenanceRecords.push({vehicleName:v,type:t,date:dt,mileage:m,cost:c,status:'Scheduled'}); localStorage.setItem('as_maintenance',JSON.stringify(maintenanceRecords)); loadMaintenance(); updateStats(); }
-        function loadMileage(){ const d=document.getElementById('mileageTable'); if(!mileageLogs.length){ d.innerHTML='<p>No trips.</p>'; return; } let h='<table class="table-dark-custom"><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>From</th><th>To</th><th>Dist</th></tr></thead><tbody>'; mileageLogs.forEach(l=>h+=`<tr><td>${l.date}</td><td>${l.vehicleName}</td><td>${l.driverName}</td><td>${l.startLocation}</td><td>${l.endLocation}</td><td>${l.distance} km</td></tr>`); h+='</tbody></table>'; d.innerHTML=h; }
-        function showAddMileageForm(){ const v=prompt('Vehicle:'); if(!v)return; const dr=prompt('Driver:'); if(!dr)return; const s=prompt('From:'); if(!s)return; const e=prompt('To:'); if(!e)return; const dist=prompt('Distance (km):'); if(!dist)return; mileageLogs.push({date:new Date().toLocaleDateString(),vehicleName:v,driverName:dr,startLocation:s,endLocation:e,distance:dist}); localStorage.setItem('as_mileage',JSON.stringify(mileageLogs)); loadMileage(); updateStats(); }
+        function storeTelemetry(id, key, val) {
+            if (!vehicleTelemetry[id]) vehicleTelemetry[id] = {};
+            vehicleTelemetry[id][key] = val;
+            if (!vehicleMetadata[id]) {
+                vehicleMetadata[id] = { name: 'Vehicle ' + id, id };
+                updateTrayAndStats();
+            }
+            if (selectedVehicleId === id) updateTelemetryPanel(id);
+        }
 
-        // Init
-        window.addEventListener('DOMContentLoaded',()=>{
+        function handlePosition(id, data) {
+            const lat = data['position.latitude'] || data.latitude;
+            const lng = data['position.longitude'] || data.longitude;
+            if (lat && lng) {
+                vehiclePositions[id] = {
+                    lat, lng,
+                    speed: data['position.speed'] || data.speed || 0,
+                    timestamp: new Date().toLocaleTimeString()
+                };
+                if (!vehicleMetadata[id]) {
+                    vehicleMetadata[id] = { name: data['device.name'] || ('Vehicle ' + id), id };
+                }
+                updateMarker(id);
+                updateTrayAndStats();
+                if (selectedVehicleId === id) updateTelemetryPanel(id);
+            }
+        }
+
+        function handleSummary(id, data) {
+            dailySummaries[id] = {
+                total_mileage_km: data.total_mileage_km || 0,
+                driving_hours: data.driving_hours || 0,
+                max_speed_kmh: data.max_speed_kmh || 0,
+                harsh_events_total: data.harsh_events_total || 0,
+                date: data.date || '',
+                timestamp: new Date().toLocaleTimeString()
+            };
+            if (!vehicleMetadata[id]) {
+                vehicleMetadata[id] = { name: 'Vehicle ' + id, id };
+            }
+            updateTrayAndStats();
+            if (selectedVehicleId === id) updateTelemetryPanel(id);
+        }
+
+        function updateMarker(id) {
+            const pos = vehiclePositions[id];
+            if (!pos) return;
+            if (vehicleMarkers[id]) {
+                vehicleMarkers[id].setLatLng([pos.lat, pos.lng]);
+            } else {
+                const marker = L.marker([pos.lat, pos.lng], { icon: createPinIcon() }).addTo(map);
+                marker.bindPopup(`<b>${vehicleMetadata[id]?.name || 'Vehicle'}</b><br>Speed: ${pos.speed.toFixed(1)} km/h`);
+                marker.on('click', () => selectVehicle(id));
+                vehicleMarkers[id] = marker;
+            }
+        }
+
+        function updateTrayAndStats() {
+            const ids = Object.keys(vehicleMetadata);
+            document.getElementById('trayCount').textContent = ids.length;
+            const trayContent = document.getElementById('trayContent');
+            if (ids.length === 0) {
+                trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:#8b949e;">No vehicles detected</div>';
+                return;
+            }
+            let html = '';
+            ids.forEach(id => {
+                const meta = vehicleMetadata[id];
+                const pos = vehiclePositions[id];
+                const isLive = !!pos;
+                const speed = pos ? pos.speed.toFixed(1) : '0';
+                const daily = dailySummaries[id];
+                const mileage = daily ? daily.total_mileage_km.toFixed(1) : '0';
+                html += `
+                    <div class="device-item ${selectedVehicleId === id ? 'selected' : ''}" data-id="${id}" onclick="selectVehicle('${id}')">
+                        <div class="device-info">
+                            <div class="device-name">${meta.name}</div>
+                            <div class="device-detail">
+                                <span><i class="fas fa-tachometer-alt"></i> ${speed} km/h</span>
+                                <span><i class="fas fa-road"></i> ${mileage} km</span>
+                            </div>
+                        </div>
+                        <div class="device-status">
+                            ${isLive ? '<span class="dot-live"></span> Live' : '<span class="dot-offline"></span> Offline'}
+                        </div>
+                    </div>`;
+            });
+            trayContent.innerHTML = html;
+        }
+
+        async function fetchInitialData() {
+            try {
+                const resp = await fetch(API_BASE + '/devices/all', {
+                    headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN }
+                });
+                const data = await resp.json();
+                (data.result || []).forEach(d => {
+                    if (!vehicleMetadata[d.id]) vehicleMetadata[d.id] = { name: d.name || 'Vehicle ' + d.id, id: d.id };
+                });
+                updateTrayAndStats();
+            } catch (e) { console.error('Fetch error:', e); }
+        }
+
+        // ---- Init ----
+        window.addEventListener('DOMContentLoaded', () => {
             initMap();
             connectMQTT();
             fetchInitialData();
-            loadDrivers(); loadMaintenance(); loadMileage();
-            setInterval(()=>{ fetchInitialData(); updateStats(); },2000);
+            setInterval(() => {
+                fetchInitialData();
+                updateTrayAndStats();
+                if (selectedVehicleId) updateTelemetryPanel(selectedVehicleId);
+            }, 2000);
         });
     </script>
 </body>
