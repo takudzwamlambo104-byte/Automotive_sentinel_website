@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Automotive Sentinel · Fleet Intelligence</title>
-    <!-- Bootstrap 5 (only for modal, not grid) -->
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -173,7 +173,7 @@
             margin: -2px auto 0;
         }
 
-        /* ---- Route Planner Modal (transparent) ---- */
+        /* Route Planner Modal (transparent) */
         .route-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
@@ -239,7 +239,7 @@
         <i class="fas fa-satellite"></i> AUTOMOTIVE <span>SENTINEL</span>
     </div>
 
-    <!-- Top-right controls (added route planner icon) -->
+    <!-- Top-right controls -->
     <div class="controls">
         <div class="btn-ctrl" id="satelliteBtn" onclick="toggleSatellite()" title="Hybrid map">
             <i class="fas fa-layer-group"></i>
@@ -281,32 +281,26 @@
         <div id="telExtra" class="text-secondary small"></div>
     </div>
 
-    <!-- Route Planner Modal (transparent) -->
+    <!-- Route Planner Modal -->
     <div class="route-modal-overlay" id="routeModalOverlay">
-        <div class="route-modal" id="routeModal">
+        <div class="route-modal">
             <button class="close-btn" onclick="toggleRoutePlanner()">&times;</button>
             <h4><i class="fas fa-route"></i> Route & Geocoding</h4>
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('directions')" id="tabDirections">Directions</div>
-                <div class="tab" onclick="switchTab('geocoding')" id="tabGeocoding">Geocoding</div>
-                <div class="tab" onclick="switchTab('optimization')" id="tabOptimization">Optimization</div>
+                <div class="tab active" onclick="switchTab('directions')">Directions</div>
+                <div class="tab" onclick="switchTab('geocoding')">Geocoding</div>
+                <div class="tab" onclick="switchTab('optimization')">Optimization</div>
             </div>
-
-            <!-- Directions Tab -->
             <div id="tabContentDirections">
                 <input type="text" id="startInput" placeholder="Start: address or lon,lat">
                 <input type="text" id="endInput" placeholder="End: address or lon,lat">
                 <button class="btn" onclick="getRoute()">Get Route</button>
-                <button class="btn" style="background:#e94560; margin-left:5px;" onclick="clearRoute()">Clear</button>
+                <button class="btn" style="background:#e94560;" onclick="clearRoute()">Clear</button>
             </div>
-
-            <!-- Geocoding Tab -->
             <div id="tabContentGeocoding" style="display:none;">
                 <input type="text" id="geocodeInput" placeholder="Address (e.g., Harare)">
                 <button class="btn" onclick="geocode()">Search</button>
             </div>
-
-            <!-- Optimization Tab -->
             <div id="tabContentOptimization" style="display:none;">
                 <p class="small mb-2">Define jobs (lon,lat) and a vehicle start point.</p>
                 <input type="text" id="vehicleStart" placeholder="Vehicle start: lon,lat">
@@ -316,7 +310,7 @@
                     <button class="btn" style="flex:0;" onclick="addJob()">+</button>
                 </div>
                 <button class="btn mt-3" onclick="solveOptimization()">Solve VRP</button>
-                <button class="btn mt-1" style="background:#e94560;" onclick="clearOptimization()">Clear</button>
+                <button class="btn" style="background:#e94560;" onclick="clearOptimization()">Clear</button>
             </div>
         </div>
     </div>
@@ -328,25 +322,21 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script>
-        // ---- OpenRouteService API Key (JWT) ----
-        const ORS_TOKEN = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5MDMxNzk0ZDg4ZTQ4NDdhNDc5YWVmMDZhNjM3YTgwIiwiaCI6Im11cm11cjY0In0=";
-
-        // ---- Existing fleet tracking globals ----
+        // ==================== API KEYS ====================
         const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
+        const ORS_TOKEN = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5MDMxNzk0ZDg4ZTQ4NDdhNDc5YWVmMDZhNjM3YTgwIiwiaCI6Im11cm11cjY0In0";
         const MQTT_BROKER = 'wss://mqtt.flespi.io:443';
         const API_BASE = 'https://flespi.io/gw';
 
+        // ==================== FLEET STATE ====================
         let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
         let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
         let vehicleMetadata = {}, vehicleTelemetry = {};
         let selectedVehicleId = null;
         let trayOpen = false;
+        let routeLayer = null; // will be set after map init
 
-        // Route planner state
-        let routeLayer = L.layerGroup().addTo(map);  // will be added later after map init
-        let optimizationJobs = [];
-
-        // ---- Map Init ----
+        // ==================== MAP INIT ====================
         function initMap() {
             satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
             labelLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.7 });
@@ -354,7 +344,9 @@
             const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 18 });
             map = L.map('map', { center: [-17.8252, 31.0335], zoom: 7, layers: [street], zoomControl: false });
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-            routeLayer = L.layerGroup().addTo(map);  // layer for routes
+            routeLayer = L.layerGroup().addTo(map);
+
+            // Depot markers
             const depots = [
                 { name: 'Harare Central', lat: -17.8252, lng: 31.0335 },
                 { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 },
@@ -373,28 +365,257 @@
             else { map.removeLayer(hybridGroup); btn.classList.remove('active'); }
         }
 
-        // ---- Route Planner & Geocoding ----
+        // ==================== CUSTOM PIN ====================
+        function createPinIcon() {
+            return L.divIcon({
+                className: '',
+                html: `<div class="custom-pin"><div class="circle"></div><div class="point"></div></div>`,
+                iconSize: [32, 50],
+                iconAnchor: [16, 48],
+                popupAnchor: [0, -40]
+            });
+        }
+
+        // ==================== TRAY ====================
+        function toggleTray() {
+            trayOpen = !trayOpen;
+            const tray = document.getElementById('deviceTray');
+            const icon = document.getElementById('trayIcon');
+            if (trayOpen) {
+                tray.classList.add('open');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                tray.classList.remove('open');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // ==================== TELEMETRY PANEL ====================
+        function toggleTelemetry() {
+            document.getElementById('telemetryPanel').classList.toggle('open');
+        }
+
+        function updateTelemetryPanel(id) {
+            if (!id) {
+                document.getElementById('panelTitle').textContent = 'Select a vehicle';
+                document.getElementById('telSpeed').textContent = '0';
+                document.getElementById('telMileage').textContent = '0';
+                document.getElementById('telEvents').textContent = '0';
+                document.getElementById('telSignal').textContent = '--';
+                document.getElementById('signalFill').style.width = '0%';
+                document.getElementById('telAccelX').textContent = '0';
+                document.getElementById('telAccelY').textContent = '0';
+                document.getElementById('telExtra').innerHTML = '';
+                return;
+            }
+            const meta = vehicleMetadata[id] || { name: 'Vehicle ' + id };
+            const pos = vehiclePositions[id];
+            const daily = dailySummaries[id];
+            const telem = vehicleTelemetry[id] || {};
+            document.getElementById('panelTitle').textContent = meta.name;
+            document.getElementById('telSpeed').textContent = pos ? pos.speed.toFixed(1) : '0';
+            document.getElementById('telMileage').textContent = daily ? daily.total_mileage_km.toFixed(1) : '0';
+            document.getElementById('telEvents').textContent = daily ? daily.harsh_events_total : '0';
+            let sigVal = telem.signal;
+            let sigPct = 0;
+            if (sigVal !== undefined) {
+                sigPct = (typeof sigVal === 'number' && sigVal <= 100) ? sigVal : Math.round((sigVal / 31) * 100);
+            }
+            document.getElementById('telSignal').textContent = sigPct + '%';
+            document.getElementById('signalFill').style.width = sigPct + '%';
+            document.getElementById('telAccelX').textContent = (telem.accelX || 0).toFixed(3);
+            document.getElementById('telAccelY').textContent = (telem.accelY || 0).toFixed(3);
+            document.getElementById('telExtra').innerHTML = `
+                <small>Updated: ${daily ? daily.timestamp : '--'}</small><br>
+                <small>ID: ${id}</small>
+            `;
+        }
+
+        function selectVehicle(id) {
+            selectedVehicleId = id;
+            document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
+            const item = document.querySelector(`.device-item[data-id="${id}"]`);
+            if (item) item.classList.add('selected');
+            const pos = vehiclePositions[id];
+            if (pos) {
+                map.flyTo([pos.lat, pos.lng], 15, { duration: 0.8 });
+                if (vehicleMarkers[id]) vehicleMarkers[id].openPopup();
+            }
+            updateTelemetryPanel(id);
+            document.getElementById('telemetryPanel').classList.add('open');
+        }
+
+        // ==================== MQTT HANDLERS ====================
+        function setMQTTStatus(status, color) {
+            // not used visually, but kept for debug
+        }
+
+        function connectMQTT() {
+            mqttClient = mqtt.connect(MQTT_BROKER, {
+                username: FLESPI_TOKEN, password: '',
+                clientId: 'sentinel_' + Math.random().toString(16).substr(2, 8),
+                clean: true, reconnectPeriod: 5000
+            });
+            mqttClient.on('connect', () => {
+                setMQTTStatus('connected', '#238636');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position');
+                mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.x');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.y');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.z');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/gsm.signal.level');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/sig');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position.signal');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/modem.signal_quality');
+                mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/network.type');
+            });
+            mqttClient.on('message', (topic, payload) => {
+                try {
+                    const data = JSON.parse(payload.toString());
+                    const parts = topic.split('/'), deviceId = parts[4];
+                    const value = data.value !== undefined ? data.value : data;
+                    if (topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
+                    else if (topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
+                    else if (topic.includes('acceleration.x')) storeTelemetry(deviceId, 'accelX', value);
+                    else if (topic.includes('acceleration.y')) storeTelemetry(deviceId, 'accelY', value);
+                    else if (topic.includes('acceleration.z')) storeTelemetry(deviceId, 'accelZ', value);
+                    else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
+                        let sv = value;
+                        if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
+                        storeTelemetry(deviceId, 'signal', sv);
+                    }
+                    else if (topic.includes('network.type')) storeTelemetry(deviceId, 'network', value);
+                } catch (e) {}
+            });
+            mqttClient.on('error', () => setMQTTStatus('error', '#f85149'));
+            mqttClient.on('close', () => setMQTTStatus('disconnected', '#f85149'));
+        }
+
+        function storeTelemetry(id, key, val) {
+            if (!vehicleTelemetry[id]) vehicleTelemetry[id] = {};
+            vehicleTelemetry[id][key] = val;
+            if (!vehicleMetadata[id]) {
+                vehicleMetadata[id] = { name: 'Vehicle ' + id, id };
+                updateTrayAndStats();
+            }
+            if (selectedVehicleId === id) updateTelemetryPanel(id);
+        }
+
+        function handlePosition(id, data) {
+            const lat = data['position.latitude'] || data.latitude;
+            const lng = data['position.longitude'] || data.longitude;
+            if (lat && lng) {
+                vehiclePositions[id] = {
+                    lat, lng,
+                    speed: data['position.speed'] || data.speed || 0,
+                    timestamp: new Date().toLocaleTimeString()
+                };
+                if (!vehicleMetadata[id]) {
+                    vehicleMetadata[id] = { name: data['device.name'] || ('Vehicle ' + id), id };
+                }
+                updateMarker(id);
+                updateTrayAndStats();
+                if (selectedVehicleId === id) updateTelemetryPanel(id);
+            }
+        }
+
+        function handleSummary(id, data) {
+            dailySummaries[id] = {
+                total_mileage_km: data.total_mileage_km || 0,
+                driving_hours: data.driving_hours || 0,
+                max_speed_kmh: data.max_speed_kmh || 0,
+                harsh_events_total: data.harsh_events_total || 0,
+                date: data.date || '',
+                timestamp: new Date().toLocaleTimeString()
+            };
+            if (!vehicleMetadata[id]) {
+                vehicleMetadata[id] = { name: 'Vehicle ' + id, id };
+            }
+            updateTrayAndStats();
+            if (selectedVehicleId === id) updateTelemetryPanel(id);
+        }
+
+        function updateMarker(id) {
+            const pos = vehiclePositions[id];
+            if (!pos) return;
+            if (vehicleMarkers[id]) {
+                vehicleMarkers[id].setLatLng([pos.lat, pos.lng]);
+            } else {
+                const marker = L.marker([pos.lat, pos.lng], { icon: createPinIcon() }).addTo(map);
+                marker.bindPopup(`<b>${vehicleMetadata[id]?.name || 'Vehicle'}</b><br>Speed: ${pos.speed.toFixed(1)} km/h`);
+                marker.on('click', () => selectVehicle(id));
+                vehicleMarkers[id] = marker;
+            }
+        }
+
+        function updateTrayAndStats() {
+            const ids = Object.keys(vehicleMetadata);
+            document.getElementById('trayCount').textContent = ids.length;
+            const trayContent = document.getElementById('trayContent');
+            if (ids.length === 0) {
+                trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:#8b949e;">No vehicles detected</div>';
+                return;
+            }
+            let html = '';
+            ids.forEach(id => {
+                const meta = vehicleMetadata[id];
+                const pos = vehiclePositions[id];
+                const isLive = !!pos;
+                const speed = pos ? pos.speed.toFixed(1) : '0';
+                const daily = dailySummaries[id];
+                const mileage = daily ? daily.total_mileage_km.toFixed(1) : '0';
+                html += `
+                    <div class="device-item ${selectedVehicleId === id ? 'selected' : ''}" data-id="${id}" onclick="selectVehicle('${id}')">
+                        <div class="device-info">
+                            <div class="device-name">${meta.name}</div>
+                            <div class="device-detail">
+                                <span><i class="fas fa-tachometer-alt"></i> ${speed} km/h</span>
+                                <span><i class="fas fa-road"></i> ${mileage} km</span>
+                            </div>
+                        </div>
+                        <div class="device-status">
+                            ${isLive ? '<span class="dot-live"></span> Live' : '<span class="dot-offline"></span> Offline'}
+                        </div>
+                    </div>`;
+            });
+            trayContent.innerHTML = html;
+        }
+
+        async function fetchInitialData() {
+            try {
+                const resp = await fetch(API_BASE + '/devices/all', {
+                    headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN }
+                });
+                const data = await resp.json();
+                (data.result || []).forEach(d => {
+                    if (!vehicleMetadata[d.id]) vehicleMetadata[d.id] = { name: d.name || 'Vehicle ' + d.id, id: d.id };
+                });
+                updateTrayAndStats();
+            } catch (e) { console.error('Fetch error:', e); }
+        }
+
+        // ==================== ROUTE PLANNER ====================
         function toggleRoutePlanner() {
             document.getElementById('routeModalOverlay').classList.toggle('show');
         }
 
         function switchTab(tab) {
-            document.getElementById('tabDirections').classList.remove('active');
-            document.getElementById('tabGeocoding').classList.remove('active');
-            document.getElementById('tabOptimization').classList.remove('active');
             document.getElementById('tabContentDirections').style.display = 'none';
             document.getElementById('tabContentGeocoding').style.display = 'none';
             document.getElementById('tabContentOptimization').style.display = 'none';
+            document.getElementById('tabDirections').classList.remove('active');
+            document.getElementById('tabGeocoding').classList.remove('active');
+            document.getElementById('tabOptimization').classList.remove('active');
 
             if (tab === 'directions') {
-                document.getElementById('tabDirections').classList.add('active');
                 document.getElementById('tabContentDirections').style.display = 'block';
+                document.getElementById('tabDirections').classList.add('active');
             } else if (tab === 'geocoding') {
-                document.getElementById('tabGeocoding').classList.add('active');
                 document.getElementById('tabContentGeocoding').style.display = 'block';
+                document.getElementById('tabGeocoding').classList.add('active');
             } else {
-                document.getElementById('tabOptimization').classList.add('active');
                 document.getElementById('tabContentOptimization').style.display = 'block';
+                document.getElementById('tabOptimization').classList.add('active');
             }
         }
 
@@ -412,10 +633,7 @@
                 } else {
                     alert('Location not found');
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Geocoding failed');
-            }
+            } catch (e) { alert('Geocoding failed'); }
         }
 
         async function getRoute() {
@@ -423,11 +641,10 @@
             const endStr = document.getElementById('endInput').value;
             if (!startStr || !endStr) return;
 
-            // Parse coordinates or geocode
             let startCoords, endCoords;
             if (startStr.includes(',')) {
                 const parts = startStr.split(',').map(Number);
-                startCoords = [parts[0], parts[1]]; // lon, lat
+                startCoords = [parts[0], parts[1]];
             } else {
                 const geoResp = await fetch(`https://api.openrouteservice.org/geocode/search?api_key=${ORS_TOKEN}&text=${encodeURIComponent(startStr)}`);
                 const geoData = await geoResp.json();
@@ -449,33 +666,26 @@
                 const resp = await fetch(url);
                 const data = await resp.json();
                 if (data.routes && data.routes.length > 0) {
-                    const route = data.routes[0];
-                    const geoJSON = route.geometry;
-                    // Clear previous routes
                     routeLayer.clearLayers();
-                    const polyline = L.geoJSON(geoJSON, { style: { color: '#58a6ff', weight: 5, opacity: 0.8 } }).addTo(routeLayer);
+                    const route = data.routes[0];
+                    const polyline = L.geoJSON(route.geometry, { style: { color: '#58a6ff', weight: 5, opacity: 0.8 } }).addTo(routeLayer);
                     map.fitBounds(polyline.getBounds());
-                    // Add start/end markers
-                    L.marker([startCoords[1], startCoords[0]], { icon: L.divIcon({ html: '🅰️', className: '' }) }).addTo(routeLayer);
-                    L.marker([endCoords[1], endCoords[0]], { icon: L.divIcon({ html: '🅱️', className: '' }) }).addTo(routeLayer);
+                    L.marker([startCoords[1], startCoords[0]]).addTo(routeLayer).bindPopup('Start');
+                    L.marker([endCoords[1], endCoords[0]]).addTo(routeLayer).bindPopup('End');
                 } else {
                     alert('No route found');
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Routing failed');
-            }
+            } catch (e) { alert('Routing failed'); }
         }
 
-        function clearRoute() {
-            routeLayer.clearLayers();
-        }
+        function clearRoute() { routeLayer.clearLayers(); }
 
-        // ---- Optimization (VRP) ----
+        // ==================== OPTIMISATION ====================
+        let optimizationJobs = [];
+
         function addJob() {
             const input = document.getElementById('newJobInput').value.trim();
-            if (!input) return;
-            if (!input.includes(',')) { alert('Format: lon,lat'); return; }
+            if (!input || !input.includes(',')) { alert('Format: lon,lat'); return; }
             const parts = input.split(',').map(Number);
             optimizationJobs.push({ location: [parts[0], parts[1]] });
             document.getElementById('newJobInput').value = '';
@@ -490,10 +700,7 @@
             ).join('');
         }
 
-        function removeJob(index) {
-            optimizationJobs.splice(index, 1);
-            renderJobList();
-        }
+        function removeJob(index) { optimizationJobs.splice(index, 1); renderJobList(); }
 
         async function solveOptimization() {
             const startStr = document.getElementById('vehicleStart').value.trim();
@@ -502,42 +709,30 @@
             const vehicle = { start: [startParts[0], startParts[1]] };
             if (optimizationJobs.length === 0) { alert('Add at least one job'); return; }
 
-            const payload = {
-                jobs: optimizationJobs.map(j => ({ location: j.location })),
-                vehicles: [vehicle]
-            };
-            const url = `https://api.openrouteservice.org/optimization`;
+            const payload = { jobs: optimizationJobs.map(j => ({ location: j.location })), vehicles: [vehicle] };
             try {
-                const resp = await fetch(url, {
+                const resp = await fetch('https://api.openrouteservice.org/optimization', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': ORS_TOKEN
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': ORS_TOKEN },
                     body: JSON.stringify(payload)
                 });
                 const data = await resp.json();
                 if (data.routes && data.routes.length > 0) {
                     routeLayer.clearLayers();
                     data.routes.forEach((route, idx) => {
-                        const geoJSON = route.geometry;
-                        const polyline = L.geoJSON(geoJSON, {
+                        const polyline = L.geoJSON(route.geometry, {
                             style: { color: ['#58a6ff', '#f43f5e', '#10b981'][idx % 3], weight: 5 }
                         }).addTo(routeLayer);
                         map.fitBounds(polyline.getBounds());
                     });
-                    // Mark start and jobs
-                    L.marker([vehicle.start[1], vehicle.start[0]], { icon: L.divIcon({ html: '🏁', className: '' }) }).addTo(routeLayer);
+                    L.marker([vehicle.start[1], vehicle.start[0]]).addTo(routeLayer).bindPopup('Depot');
                     optimizationJobs.forEach(j => {
                         L.circleMarker([j.location[1], j.location[0]], { radius: 6, color: '#fff', fillColor: '#f43f5e', fillOpacity: 0.9 }).addTo(routeLayer);
                     });
                 } else {
                     alert('No solution found');
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Optimization failed');
-            }
+            } catch (e) { alert('Optimization failed'); }
         }
 
         function clearOptimization() {
@@ -546,14 +741,17 @@
             routeLayer.clearLayers();
         }
 
-        // (rest of your existing fleet tracking code – unchanged)
-        // ... [I will include the rest of the existing JS from previous answer without modification]
-        // To keep the answer length manageable, I'll just reference that the full code includes the previous fleet logic.
-        // In the final complete file, all the functions (initMap, connectMQTT, handlePosition, etc.) remain.
-        // I'll append the missing functions here to ensure completeness.
-
-        // ---- (Existing code continues below - included fully) ----
-        // (Due to space, I'll state that the complete file is available, but the answer contains the new route planner additions.)
+        // ==================== INIT ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            connectMQTT();
+            fetchInitialData();
+            setInterval(() => {
+                fetchInitialData();
+                updateTrayAndStats();
+                if (selectedVehicleId) updateTelemetryPanel(selectedVehicleId);
+            }, 2000);
+        });
     </script>
 </body>
 </html>
