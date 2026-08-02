@@ -231,13 +231,11 @@
                     console.log('MQTT connected');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position');
                     mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last');
-                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.x');
-                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.y');
-                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/acceleration.z');
+                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.x');
+                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.y');
+                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.z');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/gsm.signal.level');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/sig');
-                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position.signal');
-                    mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/modem.signal_quality');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/network.type');
                 });
                 mqttClient.on('message', (topic, payload) => {
@@ -247,10 +245,10 @@
                         const value = data.value !== undefined ? data.value : data;
                         if (topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
                         else if (topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
-                        else if (topic.includes('acceleration.x')) storeTelemetry(deviceId, 'accelX', value);
-                        else if (topic.includes('acceleration.y')) storeTelemetry(deviceId, 'accelY', value);
-                        else if (topic.includes('acceleration.z')) storeTelemetry(deviceId, 'accelZ', value);
-                        else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('position.signal') || topic.includes('modem.signal_quality')) {
+                        else if (topic.includes('accelerometer.x')) storeTelemetry(deviceId, 'accelX', value);
+                        else if (topic.includes('accelerometer.y')) storeTelemetry(deviceId, 'accelY', value);
+                        else if (topic.includes('accelerometer.z')) storeTelemetry(deviceId, 'accelZ', value);
+                        else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('sig') || topic.includes('sig')) {
                             let sv = value;
                             if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
                             storeTelemetry(deviceId, 'signal', sv);
