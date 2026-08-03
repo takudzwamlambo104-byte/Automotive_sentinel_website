@@ -10,126 +10,353 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0b0f15;
+            --bg-secondary: #131922;
+            --bg-card: rgba(18, 25, 35, 0.8);
+            --glass-bg: rgba(15, 20, 28, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --danger: #e94560;
+            --success: #238636;
+            --warning: #d2991d;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --transition-fast: 0.2s ease;
+            --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { width: 100%; height: 100%; font-family: 'Inter', sans-serif; background: #0a0e14; color: #e6edf3; overflow: hidden; }
+        body, html {
+            width: 100%; height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Map */
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        .title-bar { position: fixed; top: 15px; left: 15px; z-index: 1000; background: rgba(10,14,20,0.85); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); font-weight: 700; font-size: 1.1rem; color: #58a6ff; box-shadow: 0 4px 20px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px; }
-        .title-bar i { font-size: 1.2rem; } .title-bar span { color: #fff; }
-        .controls { position: fixed; top: 15px; right: 15px; z-index: 1000; display: flex; gap: 8px; }
-        .btn-ctrl { background: rgba(10,14,20,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: #8b949e; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
-        .btn-ctrl:hover { color: #fff; background: rgba(31,111,235,0.4); } .btn-ctrl.active { color: #58a6ff; border-color: #58a6ff; }
-        .tray { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 95%; max-width: 600px; background: rgba(20,27,34,0.95); backdrop-filter: blur(15px); border-radius: 24px 24px 0 0; box-shadow: 0 -5px 30px rgba(0,0,0,0.7); z-index: 1001; transition: height 0.35s; height: 68px; overflow: hidden; display: flex; flex-direction: column; }
-        .tray.open { height: 380px; } .tray-handle { height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0 20px; }
-        .tray-handle .badge { background: #1f6feb; border-radius: 12px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; }
-        .tray-content { flex: 1; overflow-y: auto; padding: 8px 12px 12px; }
-        .device-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 14px; margin-bottom: 6px; background: rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; }
-        .device-item:hover { background: rgba(31,111,235,0.15); } .device-item.selected { background: rgba(31,111,235,0.25); border: 1px solid #58a6ff; }
-        .device-info { display: flex; flex-direction: column; gap: 3px; } .device-name { font-weight: 600; font-size: 0.95rem; }
-        .device-detail { font-size: 0.75rem; color: #8b949e; display: flex; gap: 12px; }
-        .device-status { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
-        .dot-live { width: 8px; height: 8px; border-radius: 50%; background: #238636; box-shadow: 0 0 8px #238636; } .dot-offline { background: #d2991d; box-shadow: 0 0 8px #d2991d; }
-        .telemetry-panel { position: fixed; top: 0; right: -380px; width: 360px; max-width: 85vw; height: 100%; background: rgba(20,27,34,0.97); backdrop-filter: blur(15px); border-left: 1px solid rgba(255,255,255,0.1); z-index: 1002; transition: right 0.35s; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        .telemetry-panel.open { right: 0; } .panel-close { align-self: flex-end; background: none; border: none; color: #8b949e; font-size: 1.4rem; cursor: pointer; }
-        .panel-header { font-weight: 700; font-size: 1.2rem; margin-bottom: 20px; color: #58a6ff; }
-        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-        .telemetry-card { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px; text-align: center; }
-        .telemetry-card .value { font-size: 1.5rem; font-weight: 700; color: #58a6ff; } .telemetry-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8b949e; margin-top: 4px; }
-        .signal-bar { height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; margin-top: 8px; } .signal-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
-        .fab-telemetry { position: fixed; bottom: 100px; right: 20px; width: 48px; height: 48px; border-radius: 50%; background: #1f6feb; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; z-index: 1003; box-shadow: 0 4px 20px rgba(31,111,235,0.5); }
-        .custom-pin { width: 32px; height: 50px; } .custom-pin .circle { width: 24px; height: 24px; background: #1f6feb; border-radius: 50%; border: 3px solid white; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .custom-pin .point { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 16px solid #1f6feb; margin: -2px auto 0; }
-        .route-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: center; justify-content: center; }
-        .route-modal-overlay.show { display: flex; }
-        .route-modal { background: rgba(10,14,20,0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; padding: 25px; color: #e6edf3; backdrop-filter: blur(15px); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
-        .route-modal h4 { color: #58a6ff; margin-bottom: 20px; } .route-modal .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
-        .route-modal .tab { flex: 1; text-align: center; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.85rem; }
-        .route-modal .tab.active { background: rgba(31,111,235,0.3); border-color: #58a6ff; }
-        .route-modal input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: white; padding: 8px; width: 100%; margin-bottom: 10px; }
-        .route-modal input::placeholder { color: #8b949e; } .route-modal .btn { background: #1f6feb; color: white; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; margin-top: 5px; }
-        .route-modal .btn:hover { background: #388bfd; } .close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; }
-        .job-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; } .job-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .geofence-panel { position: fixed; top: 0; left: -380px; width: 360px; max-width: 85vw; height: 100%; background: rgba(20,27,34,0.97); backdrop-filter: blur(15px); border-right: 1px solid rgba(255,255,255,0.1); z-index: 1002; transition: left 0.35s; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        .geofence-panel.open { left: 0; }
-        .geofence-item { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
-        .geofence-item:hover { background: rgba(31,111,235,0.15); }
-        .geofence-name { font-weight: 600; } .geofence-visits { font-size: 0.8rem; color: #8b949e; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+        /* ---- TOP BAR ---- */
+        .top-bar {
+            position: fixed; top: 16px; left: 16px; right: 16px;
+            z-index: 1000; display: flex; justify-content: space-between; align-items: center;
+            pointer-events: none;
+        }
+        .brand {
+            background: var(--glass-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 50px;
+            padding: 10px 22px; font-weight: 700; font-size: 1.1rem;
+            color: var(--accent); box-shadow: var(--shadow-lg);
+            display: flex; align-items: center; gap: 10px;
+            pointer-events: auto;
+        }
+        .brand i { font-size: 1.3rem; }
+        .brand span { color: #fff; font-weight: 600; letter-spacing: -0.3px; }
+
+        .top-actions {
+            display: flex; gap: 10px; pointer-events: auto;
+        }
+
+        .icon-btn {
+            background: var(--glass-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 50%;
+            width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary); font-size: 1.1rem; cursor: pointer;
+            transition: all var(--transition-fast); box-shadow: var(--shadow-sm);
+        }
+        .icon-btn:hover { color: #fff; background: rgba(31,111,235,0.3); border-color: var(--accent); }
+        .icon-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(31,111,235,0.2); }
+
+        /* ---- VEHICLE TRAY ---- */
+        .vehicle-tray {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 95%; max-width: 580px;
+            background: var(--glass-bg); backdrop-filter: blur(20px);
+            border-radius: 24px 24px 0 0; border: 1px solid var(--glass-border);
+            border-bottom: none; box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            z-index: 1001; transition: height var(--transition-smooth);
+            height: 72px; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .vehicle-tray.open { height: 420px; }
+        .tray-header {
+            height: 72px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; cursor: pointer; flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+        }
+        .tray-header-left { display: flex; align-items: center; gap: 12px; }
+        .tray-title { font-weight: 600; font-size: 1rem; }
+        .vehicle-count {
+            background: var(--accent); border-radius: 20px; padding: 2px 12px;
+            font-size: 0.75rem; font-weight: 700; color: #fff;
+        }
+        .tray-chevron {
+            transition: transform var(--transition-smooth);
+            color: var(--text-secondary); font-size: 1.2rem;
+        }
+        .vehicle-tray.open .tray-chevron { transform: rotate(180deg); }
+
+        .tray-body { flex: 1; overflow-y: auto; padding: 8px 16px 16px; }
+
+        .vehicle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-radius: var(--radius-md); margin-bottom: 6px;
+            background: rgba(255,255,255,0.03); cursor: pointer;
+            transition: all var(--transition-fast); border: 1px solid transparent;
+        }
+        .vehicle-row:hover { background: rgba(31,111,235,0.1); border-color: rgba(88,166,255,0.3); }
+        .vehicle-row.selected { background: rgba(31,111,235,0.2); border-color: var(--accent); }
+
+        .vehicle-avatar {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: linear-gradient(135deg, #1f6feb, #58a6ff);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 0.9rem;
+            margin-right: 14px; flex-shrink: 0;
+        }
+        .vehicle-info { flex: 1; }
+        .vehicle-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; }
+        .vehicle-stats { font-size: 0.75rem; color: var(--text-secondary); display: flex; gap: 14px; }
+        .vehicle-status { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-live { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-offline { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+        /* ---- PANELS (Telemetry & Geofence) ---- */
+        .slide-panel {
+            position: fixed; top: 0; width: 380px; max-width: 85vw; height: 100%;
+            background: var(--glass-bg); backdrop-filter: blur(24px);
+            border-left: 1px solid var(--glass-border);
+            z-index: 1002; transition: all var(--transition-smooth);
+            display: flex; flex-direction: column; padding: 24px 20px; overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+        .panel-right { right: -400px; }
+        .panel-right.open { right: 0; }
+        .panel-left { left: -400px; border-left: none; border-right: 1px solid var(--glass-border); }
+        .panel-left.open { left: 0; }
+
+        .panel-close-btn {
+            align-self: flex-end; background: none; border: none;
+            color: var(--text-secondary); font-size: 1.6rem; cursor: pointer;
+            transition: color var(--transition-fast);
+        }
+        .panel-close-btn:hover { color: #fff; }
+
+        .panel-title {
+            font-weight: 700; font-size: 1.2rem; margin-bottom: 24px;
+            color: var(--accent); display: flex; align-items: center; gap: 10px;
+        }
+
+        .telemetry-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+        }
+        .telem-card {
+            background: rgba(255,255,255,0.04); border-radius: var(--radius-md);
+            padding: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05);
+            transition: background var(--transition-fast);
+        }
+        .telem-card:hover { background: rgba(255,255,255,0.08); }
+        .telem-value { font-size: 1.7rem; font-weight: 700; color: var(--accent); line-height: 1.2; }
+        .telem-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
+            color: var(--text-secondary); margin-top: 6px;
+        }
+        .signal-bar { height: 6px; background: #21262d; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .signal-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s; }
+
+        .geofence-list-item {
+            background: rgba(255,255,255,0.03); border-radius: var(--radius-md);
+            padding: 14px; margin-bottom: 8px; cursor: pointer;
+            border: 1px solid transparent; transition: all var(--transition-fast);
+        }
+        .geofence-list-item:hover { background: rgba(31,111,235,0.1); border-color: rgba(88,166,255,0.3); }
+        .geofence-list-item.selected { background: rgba(31,111,235,0.2); border-color: var(--accent); }
+        .geofence-name { font-weight: 600; margin-bottom: 4px; }
+        .geofence-visits { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* ---- MODAL ---- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+            z-index: 2000; display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: var(--glass-bg); backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border); border-radius: 24px;
+            width: 90%; max-width: 620px; max-height: 85vh; overflow-y: auto;
+            padding: 28px; color: var(--text-primary); box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .modal-header h4 { color: var(--accent); font-weight: 700; }
+
+        /* Form elements */
+        .glass-input {
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px; color: #fff; padding: 12px 16px; width: 100%;
+            margin-bottom: 12px; font-size: 0.9rem; outline: none;
+            transition: border-color var(--transition-fast);
+        }
+        .glass-input:focus { border-color: var(--accent); }
+        .glass-input::placeholder { color: var(--text-secondary); }
+
+        .btn {
+            background: var(--accent); border: none; border-radius: 12px;
+            padding: 12px 20px; font-weight: 600; color: #fff; cursor: pointer;
+            transition: all var(--transition-fast); font-size: 0.9rem;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn:hover { background: #388bfd; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(31,111,235,0.3); }
+        .btn-outline {
+            background: transparent; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #ff4d6a; }
+
+        .tab-group { display: flex; gap: 6px; margin-bottom: 20px; }
+        .tab-btn {
+            flex: 1; text-align: center; padding: 10px; background: transparent;
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+            cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: all var(--transition-fast);
+        }
+        .tab-btn.active { background: rgba(31,111,235,0.3); border-color: var(--accent); color: #fff; }
+
+        /* FAB */
+        .fab {
+            position: fixed; bottom: 110px; right: 24px; width: 52px; height: 52px;
+            border-radius: 50%; background: var(--accent); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; cursor: pointer; z-index: 1003;
+            box-shadow: 0 8px 25px rgba(31,111,235,0.5);
+            transition: all var(--transition-fast);
+        }
+        .fab:hover { transform: scale(1.05); }
+
+        /* Custom Leaflet overrides */
+        .leaflet-control-zoom { border-radius: 12px; overflow: hidden; }
+        .leaflet-control-zoom a {
+            background: var(--glass-bg) !important; color: #fff !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+        }
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-card) !important; color: #fff !important;
+            border-radius: 16px !important; box-shadow: var(--shadow-lg) !important;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div class="title-bar"><i class="fas fa-satellite"></i> AUTOMOTIVE <span>SENTINEL</span></div>
-    <div class="controls">
-        <div class="btn-ctrl" id="satelliteBtn" onclick="toggleSatellite()" title="Hybrid map"><i class="fas fa-layer-group"></i></div>
-        <div class="btn-ctrl" onclick="toggleRoutePlanner()" title="Route Planner & Geocoding"><i class="fas fa-route"></i></div>
-        <div class="btn-ctrl" onclick="toggleTelemetry()" title="Telemetry panel"><i class="fas fa-chart-line"></i></div>
-        <div class="btn-ctrl" id="geofenceToggleBtn" onclick="toggleGeofencePanel()" title="Geofences"><i class="fas fa-draw-polygon"></i></div>
-    </div>
 
-    <div class="tray" id="deviceTray">
-        <div class="tray-handle" onclick="toggleTray()">
-            <i class="fas fa-chevron-up" id="trayIcon" style="transition: transform 0.3s;"></i>
-            <span>Vehicles</span>
-            <span class="badge" id="trayCount">0</span>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="brand">
+            <i class="fas fa-satellite"></i>
+            AUTOMOTIVE <span>SENTINEL</span>
         </div>
-        <div class="tray-content" id="trayContent"></div>
+        <div class="top-actions">
+            <div class="icon-btn" id="satelliteBtn" onclick="toggleSatellite()" title="Hybrid map"><i class="fas fa-layer-group"></i></div>
+            <div class="icon-btn" onclick="toggleRoutePlanner()" title="Route & Geocoding"><i class="fas fa-route"></i></div>
+            <div class="icon-btn" onclick="toggleTelemetry()" title="Telemetry"><i class="fas fa-chart-line"></i></div>
+            <div class="icon-btn" onclick="toggleGeofencePanel()" title="Geofences"><i class="fas fa-draw-polygon"></i></div>
+        </div>
     </div>
 
-    <div class="geofence-panel" id="geofencePanel">
-        <button class="panel-close" onclick="toggleGeofencePanel()">&times;</button>
-        <div class="panel-header"><i class="fas fa-map-marker-alt"></i> Geofences</div>
-        <button class="btn" style="background:#1f6feb; margin-bottom:15px;" onclick="startDrawGeofence()">+ New Geofence</button>
+    <!-- Vehicle Tray -->
+    <div class="vehicle-tray" id="vehicleTray">
+        <div class="tray-header" onclick="toggleTray()">
+            <div class="tray-header-left">
+                <i class="fas fa-truck"></i>
+                <span class="tray-title">Vehicles</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="vehicle-count" id="trayCount">0</span>
+                <i class="fas fa-chevron-up tray-chevron"></i>
+            </div>
+        </div>
+        <div class="tray-body" id="trayContent"></div>
+    </div>
+
+    <!-- Geofence Panel (Left) -->
+    <div class="slide-panel panel-left" id="geofencePanel">
+        <button class="panel-close-btn" onclick="toggleGeofencePanel()">&times;</button>
+        <div class="panel-title"><i class="fas fa-map-marker-alt"></i> Geofences</div>
+        <button class="btn" style="margin-bottom: 20px;" onclick="startDrawGeofence()"><i class="fas fa-plus"></i> New Geofence</button>
         <div id="geofenceList"></div>
     </div>
 
-    <div class="telemetry-panel" id="telemetryPanel">
-        <button class="panel-close" onclick="toggleTelemetry()">&times;</button>
-        <div class="panel-header" id="panelTitle">Select a vehicle</div>
+    <!-- Telemetry Panel (Right) -->
+    <div class="slide-panel panel-right" id="telemetryPanel">
+        <button class="panel-close-btn" onclick="toggleTelemetry()">&times;</button>
+        <div class="panel-title" id="panelTitle"><i class="fas fa-microchip"></i> Select a vehicle</div>
         <div class="telemetry-grid">
-            <div class="telemetry-card"><div class="value" id="telSpeed">0</div><div class="label">Speed (km/h)</div></div>
-            <div class="telemetry-card"><div class="value" id="telMileage">0</div><div class="label">Mileage (km)</div></div>
-            <div class="telemetry-card"><div class="value" id="telEvents">0</div><div class="label">Harsh Events</div></div>
-            <div class="telemetry-card"><div class="value" id="telSignal">--</div><div class="label">Signal</div><div class="signal-bar"><div class="signal-fill" id="signalFill" style="width:0%; background:#58a6ff;"></div></div></div>
-            <div class="telemetry-card"><div class="value" id="telAccelX">0</div><div class="label">Accel X (g)</div></div>
-            <div class="telemetry-card"><div class="value" id="telAccelY">0</div><div class="label">Accel Y (g)</div></div>
+            <div class="telem-card"><div class="telem-value" id="telSpeed">0</div><div class="telem-label">Speed (km/h)</div></div>
+            <div class="telem-card"><div class="telem-value" id="telMileage">0</div><div class="telem-label">Mileage (km)</div></div>
+            <div class="telem-card"><div class="telem-value" id="telEvents">0</div><div class="telem-label">Harsh Events</div></div>
+            <div class="telem-card"><div class="telem-value" id="telSignal">--</div><div class="telem-label">Signal</div><div class="signal-bar"><div class="signal-fill" id="signalFill" style="width:0%;"></div></div></div>
+            <div class="telem-card"><div class="telem-value" id="telAccelX">0</div><div class="telem-label">Accel X (g)</div></div>
+            <div class="telem-card"><div class="telem-value" id="telAccelY">0</div><div class="telem-label">Accel Y (g)</div></div>
         </div>
         <div id="telExtra" class="text-secondary small"></div>
     </div>
 
-    <div class="route-modal-overlay" id="routeModalOverlay">
-        <div class="route-modal">
-            <button class="close-btn" onclick="toggleRoutePlanner()">&times;</button>
-            <h4><i class="fas fa-route"></i> Route & Geocoding</h4>
-            <div class="tabs">
-                <div class="tab active" onclick="switchTab('directions')">Directions</div>
-                <div class="tab" onclick="switchTab('geocoding')">Geocoding</div>
-                <div class="tab" onclick="switchTab('optimization')">Optimization</div>
+    <!-- Route Planner Modal -->
+    <div class="modal-overlay" id="routeModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h4><i class="fas fa-route"></i> Route & Geocoding</h4>
+                <button class="panel-close-btn" onclick="toggleRoutePlanner()">&times;</button>
+            </div>
+            <div class="tab-group">
+                <div class="tab-btn active" onclick="switchTab('directions')">Directions</div>
+                <div class="tab-btn" onclick="switchTab('geocoding')">Geocoding</div>
+                <div class="tab-btn" onclick="switchTab('optimization')">Optimization</div>
             </div>
             <div id="tabContentDirections">
-                <input type="text" id="startInput" placeholder="Start: address or lon,lat">
-                <input type="text" id="endInput" placeholder="End: address or lon,lat">
-                <button class="btn" onclick="getRoute()">Get Route</button>
-                <button class="btn" style="background:#e94560;" onclick="clearRoute()">Clear</button>
+                <input class="glass-input" type="text" id="startInput" placeholder="Start: address or lon,lat">
+                <input class="glass-input" type="text" id="endInput" placeholder="End: address or lon,lat">
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="getRoute()"><i class="fas fa-search"></i> Get Route</button>
+                    <button class="btn btn-danger" onclick="clearRoute()"><i class="fas fa-trash"></i> Clear</button>
+                </div>
             </div>
             <div id="tabContentGeocoding" style="display:none;">
-                <input type="text" id="geocodeInput" placeholder="Address (e.g., Harare)">
-                <button class="btn" onclick="geocode()">Search</button>
-                <button class="btn" style="background:#6c757d;" onclick="testToken()">Test Token</button>
+                <input class="glass-input" type="text" id="geocodeInput" placeholder="Address (e.g., Harare)">
+                <button class="btn" onclick="geocode()"><i class="fas fa-map-pin"></i> Search</button>
+                <button class="btn btn-outline" style="margin-left: 8px;" onclick="testToken()">Test Token</button>
             </div>
             <div id="tabContentOptimization" style="display:none;">
-                <p class="small mb-2">Define jobs (lon,lat) and a vehicle start point.</p>
-                <input type="text" id="vehicleStart" placeholder="Vehicle start: lon,lat">
+                <p class="small mb-2 text-secondary">Define jobs (lon,lat) and a vehicle start point.</p>
+                <input class="glass-input" type="text" id="vehicleStart" placeholder="Vehicle start: lon,lat">
                 <div id="jobList" class="job-list"></div>
                 <div style="display:flex; gap:10px;">
-                    <input type="text" id="newJobInput" placeholder="Job: lon,lat">
+                    <input class="glass-input" type="text" id="newJobInput" placeholder="Job: lon,lat">
                     <button class="btn" style="flex:0;" onclick="addJob()">+</button>
                 </div>
-                <button class="btn mt-3" onclick="solveOptimization()">Solve VRP</button>
-                <button class="btn" style="background:#e94560;" onclick="clearOptimization()">Clear</button>
+                <button class="btn mt-3" onclick="solveOptimization()"><i class="fas fa-calculator"></i> Solve VRP</button>
+                <button class="btn btn-danger mt-2" onclick="clearOptimization()">Clear</button>
             </div>
         </div>
     </div>
 
-    <div class="fab-telemetry d-md-none" onclick="toggleTelemetry()"><i class="fas fa-info"></i></div>
+    <!-- FAB for mobile telemetry -->
+    <div class="fab d-md-none" onclick="toggleTelemetry()"><i class="fas fa-info"></i></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -201,15 +428,13 @@
             function createPinIcon() {
                 return L.divIcon({
                     className: '',
-                    html: '<div class="custom-pin"><div class="circle"></div><div class="point"></div></div>',
+                    html: '<div style="width:32px;height:50px;"><div style="width:24px;height:24px;background:#1f6feb;border-radius:50%;border:3px solid white;margin:0 auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);"></div><div style="width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:16px solid #1f6feb;margin:-2px auto 0;"></div></div>',
                     iconSize: [32, 50], iconAnchor: [16, 48], popupAnchor: [0, -40]
                 });
             }
 
             window.toggleTray = function() {
-                const tray = document.getElementById('deviceTray');
-                tray.classList.toggle('open');
-                document.getElementById('trayIcon').style.transform = tray.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+                document.getElementById('vehicleTray').classList.toggle('open');
             };
 
             window.toggleTelemetry = function() {
@@ -223,7 +448,7 @@
 
             function updateTelemetryPanel(id) {
                 if (!id) {
-                    document.getElementById('panelTitle').textContent = 'Select a vehicle';
+                    document.getElementById('panelTitle').innerHTML = '<i class="fas fa-microchip"></i> Select a vehicle';
                     document.getElementById('telSpeed').textContent = '0';
                     document.getElementById('telMileage').textContent = '0';
                     document.getElementById('telEvents').textContent = '0';
@@ -238,7 +463,7 @@
                 const pos = vehiclePositions[id];
                 const daily = dailySummaries[id];
                 const telem = vehicleTelemetry[id] || {};
-                document.getElementById('panelTitle').textContent = meta.name;
+                document.getElementById('panelTitle').innerHTML = `<i class="fas fa-microchip"></i> ${meta.name}`;
                 document.getElementById('telSpeed').textContent = pos ? pos.speed.toFixed(1) : '0';
                 document.getElementById('telMileage').textContent = daily ? daily.total_mileage_km.toFixed(1) : '0';
                 document.getElementById('telEvents').textContent = daily ? daily.harsh_events_total : '0';
@@ -255,8 +480,8 @@
 
             window.selectVehicle = function(id) {
                 selectedVehicleId = id;
-                document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
-                const item = document.querySelector(`.device-item[data-id="${id}"]`);
+                document.querySelectorAll('.vehicle-row').forEach(el => el.classList.remove('selected'));
+                const item = document.querySelector(`.vehicle-row[data-id="${id}"]`);
                 if (item) item.classList.add('selected');
                 const pos = vehiclePositions[id];
                 if (pos) {
@@ -295,7 +520,7 @@
                         else if (topic.includes('accelerometer.x')) storeTelemetry(deviceId, 'accelX', value);
                         else if (topic.includes('accelerometer.y')) storeTelemetry(deviceId, 'accelY', value);
                         else if (topic.includes('accelerometer.z')) storeTelemetry(deviceId, 'accelZ', value);
-                        else if (topic.includes('gsm.signal.level') || topic.includes('/sig') || topic.includes('sig')) {
+                        else if (topic.includes('gsm.signal.level') || topic.includes('/sig')) {
                             let sv = value;
                             if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv / 31) * 100);
                             storeTelemetry(deviceId, 'signal', sv);
@@ -358,7 +583,7 @@
                 document.getElementById('trayCount').textContent = ids.length;
                 const trayContent = document.getElementById('trayContent');
                 if (ids.length === 0) {
-                    trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:#8b949e;">No vehicles detected</div>';
+                    trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-secondary);">No vehicles detected</div>';
                     return;
                 }
                 let html = '';
@@ -369,17 +594,19 @@
                     const speed = pos ? pos.speed.toFixed(1) : '0';
                     const daily = dailySummaries[id];
                     const mileage = daily ? daily.total_mileage_km.toFixed(1) : '0';
+                    const initials = (meta.name || id).substring(0, 2).toUpperCase();
                     html += `
-                        <div class="device-item ${selectedVehicleId === id ? 'selected' : ''}" data-id="${id}" onclick="selectVehicle('${id}')">
-                            <div class="device-info">
-                                <div class="device-name">${meta.name}</div>
-                                <div class="device-detail">
+                        <div class="vehicle-row ${selectedVehicleId === id ? 'selected' : ''}" data-id="${id}" onclick="selectVehicle('${id}')">
+                            <div class="vehicle-avatar">${initials}</div>
+                            <div class="vehicle-info">
+                                <div class="vehicle-name">${meta.name}</div>
+                                <div class="vehicle-stats">
                                     <span><i class="fas fa-tachometer-alt"></i> ${speed} km/h</span>
                                     <span><i class="fas fa-road"></i> ${mileage} km</span>
                                 </div>
                             </div>
-                            <div class="device-status">
-                                ${isLive ? '<span class="dot-live"></span> Live' : '<span class="dot-offline"></span> Offline'}
+                            <div class="vehicle-status">
+                                ${isLive ? '<span class="status-dot status-live"></span> Live' : '<span class="status-dot status-offline"></span> Offline'}
                             </div>
                         </div>`;
                 });
@@ -399,7 +626,6 @@
                 } catch (e) { console.error('Fetch error:', e); }
             }
 
-            // ------------- Geofence functions -------------
             window.selectGeofence = function(gid) {
                 selectedGeofenceId = gid;
                 renderGeofenceList();
@@ -494,7 +720,7 @@
                         visitsHtml += `<div>${name}: ${gf.vehicleVisits[vid]} visits</div>`;
                     });
                     if (!visitsHtml) visitsHtml = '<div>No visits yet</div>';
-                    html += `<div class="geofence-item ${selectedGeofenceId === gf.id ? 'bg-primary bg-opacity-25' : ''}" onclick="selectGeofence('${gf.id}')">
+                    html += `<div class="geofence-list-item ${selectedGeofenceId === gf.id ? 'selected' : ''}" onclick="selectGeofence('${gf.id}')">
                         <div class="geofence-name">${gf.name} (${gf.type})</div>
                         <div class="geofence-visits">${visitsHtml}</div>
                     </div>`;
@@ -511,175 +737,114 @@
                     const layer = e.layer;
                     const type = e.layerType;
                     const name = prompt('Geofence name:', 'Zone ' + (geofences.length+1)) || 'Zone ' + (geofences.length+1);
-                    let gf = {
-                        id: Date.now().toString(),
-                        name: name,
-                        type: type,
-                        vehicleVisits: {},
-                        inGeofenceState: {}
-                    };
-                    if (type === 'circle') {
-                        gf.center = layer.getLatLng();
-                        gf.radius = layer.getRadius();
-                    } else if (type === 'polygon' || type === 'rectangle') {
-                        gf.coordinates = layer.getLatLngs();
-                    }
-                    geofences.push(gf);
-                    saveGeofences();
-                    renderGeofencesOnMap();
-                    renderGeofenceList();
+                    let gf = { id: Date.now().toString(), name, type, vehicleVisits: {}, inGeofenceState: {} };
+                    if (type === 'circle') { gf.center = layer.getLatLng(); gf.radius = layer.getRadius(); }
+                    else { gf.coordinates = layer.getLatLngs(); }
+                    geofences.push(gf); saveGeofences(); renderGeofencesOnMap(); renderGeofenceList();
                 });
             };
 
-            // ------------- Route planner (unchanged) -------------
-            window.toggleRoutePlanner = function() {
-                document.getElementById('routeModalOverlay').classList.toggle('show');
-            };
+            window.toggleRoutePlanner = function() { document.getElementById('routeModalOverlay').classList.toggle('show'); };
             window.switchTab = function(tab) {
                 document.getElementById('tabContentDirections').style.display = 'none';
                 document.getElementById('tabContentGeocoding').style.display = 'none';
                 document.getElementById('tabContentOptimization').style.display = 'none';
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                if (tab === 'directions') {
-                    document.getElementById('tabContentDirections').style.display = 'block';
-                    document.querySelector('.tab:nth-child(1)').classList.add('active');
-                } else if (tab === 'geocoding') {
-                    document.getElementById('tabContentGeocoding').style.display = 'block';
-                    document.querySelector('.tab:nth-child(2)').classList.add('active');
-                } else {
-                    document.getElementById('tabContentOptimization').style.display = 'block';
-                    document.querySelector('.tab:nth-child(3)').classList.add('active');
-                }
+                document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+                if (tab === 'directions') { document.getElementById('tabContentDirections').style.display = 'block'; document.querySelector('.tab-btn:nth-child(1)').classList.add('active'); }
+                else if (tab === 'geocoding') { document.getElementById('tabContentGeocoding').style.display = 'block'; document.querySelector('.tab-btn:nth-child(2)').classList.add('active'); }
+                else { document.getElementById('tabContentOptimization').style.display = 'block'; document.querySelector('.tab-btn:nth-child(3)').classList.add('active'); }
             };
             window.testToken = async function() {
                 try {
-                    const resp = await fetch('https://api.openrouteservice.org/geocode/search?text=Harare', {
-                        headers: { 'Authorization': 'Bearer ' + ORS_TOKEN }
-                    });
-                    if (resp.ok) alert('Token is valid!');
-                    else alert('Token invalid or expired. Status: ' + resp.status);
-                } catch (e) { alert('Network error: ' + e.message); }
+                    const resp = await fetch('https://api.openrouteservice.org/geocode/search?text=Harare', { headers: { 'Authorization': 'Bearer ' + ORS_TOKEN } });
+                    if (resp.ok) alert('Token valid'); else alert('Token invalid');
+                } catch(e) { alert('Error'); }
             };
             window.geocode = async function() {
                 const query = document.getElementById('geocodeInput').value.trim();
                 if (!query) return;
                 try {
-                    const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(query)}`, {
-                        headers: { 'Authorization': 'Bearer ' + ORS_TOKEN }
-                    });
+                    const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(query)}`, { headers: { 'Authorization': 'Bearer ' + ORS_TOKEN } });
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
-                    if (data.features && data.features.length > 0) {
-                        const [lon, lat] = data.features[0].geometry.coordinates;
-                        map.setView([lat, lon], 13);
-                        L.marker([lat, lon]).addTo(map).bindPopup(query).openPopup();
-                    } else alert('Location not found.');
-                } catch (e) { console.error(e); alert('Geocoding failed: ' + e.message); }
+                    if (data.features?.length) { const [lon, lat] = data.features[0].geometry.coordinates; map.setView([lat, lon], 13); L.marker([lat, lon]).addTo(map).bindPopup(query).openPopup(); }
+                    else alert('Not found');
+                } catch(e) { console.error(e); alert('Geocoding failed'); }
             };
             async function resolveCoords(str) {
-                if (str.includes(',')) {
-                    const parts = str.split(',').map(Number);
-                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]];
-                }
-                const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(str)}`, {
-                    headers: { 'Authorization': 'Bearer ' + ORS_TOKEN }
-                });
+                if (str.includes(',')) { const parts = str.split(',').map(Number); if (parts.length===2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]]; }
+                const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(str)}`, { headers: { 'Authorization': 'Bearer ' + ORS_TOKEN } });
                 if (!resp.ok) throw new Error('Geocoding failed');
                 const data = await resp.json();
-                if (data.features?.length) return data.features[0].geometry.coordinates;
-                return null;
+                return data.features?.length ? data.features[0].geometry.coordinates : null;
             }
             window.getRoute = async function() {
                 const startStr = document.getElementById('startInput').value.trim();
                 const endStr = document.getElementById('endInput').value.trim();
                 if (!startStr || !endStr) return;
                 try {
-                    const startCoords = await resolveCoords(startStr);
-                    const endCoords = await resolveCoords(endStr);
-                    if (!startCoords || !endCoords) { alert('Could not find location.'); return; }
+                    const startCoords = await resolveCoords(startStr), endCoords = await resolveCoords(endStr);
+                    if (!startCoords || !endCoords) { alert('Location not found'); return; }
                     const url = `https://api.openrouteservice.org/v2/directions/driving-car?start=${startCoords[0]},${startCoords[1]}&end=${endCoords[0]},${endCoords[1]}`;
                     const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + ORS_TOKEN } });
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
                     if (data.type === 'FeatureCollection' && data.features?.length) {
                         routeLayer.clearLayers();
-                        const route = data.features[0];
-                        L.geoJSON(route, { style: { color: '#58a6ff', weight: 5 } }).addTo(routeLayer);
-                        map.fitBounds(L.geoJSON(route).getBounds());
+                        L.geoJSON(data.features[0], { style: { color: '#58a6ff', weight: 5 } }).addTo(routeLayer);
+                        map.fitBounds(routeLayer.getBounds());
                         L.marker([startCoords[1], startCoords[0]]).addTo(routeLayer).bindPopup('Start');
                         L.marker([endCoords[1], endCoords[0]]).addTo(routeLayer).bindPopup('End');
-                    } else alert('No route found.');
-                } catch (e) { console.error(e); alert('Routing failed: ' + e.message); }
+                    } else alert('No route');
+                } catch(e) { console.error(e); alert('Routing failed'); }
             };
             window.clearRoute = function() { routeLayer.clearLayers(); };
 
-            // ------------- Optimisation (unchanged) -------------
             let optimizationJobs = [];
             window.addJob = function() {
                 const input = document.getElementById('newJobInput').value.trim();
-                if (!input || !input.includes(',')) { alert('Format: lon,lat'); return; }
+                if (!input || !input.includes(',')) return;
                 const parts = input.split(',').map(Number);
-                if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) { alert('Invalid coordinates'); return; }
+                if (parts.length!==2 || isNaN(parts[0]) || isNaN(parts[1])) return;
                 optimizationJobs.push({ location: [parts[0], parts[1]] });
                 document.getElementById('newJobInput').value = '';
                 renderJobList();
             };
             function renderJobList() {
-                document.getElementById('jobList').innerHTML = optimizationJobs.map((job, i) =>
-                    `<div class="job-item"><span>Job ${i+1}: ${job.location[0].toFixed(5)}, ${job.location[1].toFixed(5)}</span>
-                    <button class="btn" style="background:#e94560; padding:2px 8px;" onclick="removeJob(${i})">X</button></div>`
-                ).join('');
+                document.getElementById('jobList').innerHTML = optimizationJobs.map((job,i) => 
+                    `<div class="job-item" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <span>Job ${i+1}: ${job.location[0].toFixed(5)}, ${job.location[1].toFixed(5)}</span>
+                        <button class="btn btn-danger" style="padding:2px 10px;" onclick="removeJob(${i})">X</button>
+                    </div>`).join('');
             }
-            window.removeJob = function(index) { optimizationJobs.splice(index, 1); renderJobList(); };
+            window.removeJob = function(i) { optimizationJobs.splice(i,1); renderJobList(); };
             window.solveOptimization = async function() {
                 const startStr = document.getElementById('vehicleStart').value.trim();
-                if (!startStr || !startStr.includes(',')) { alert('Vehicle start: lon,lat'); return; }
+                if (!startStr || !startStr.includes(',')) { alert('Enter start lon,lat'); return; }
                 const parts = startStr.split(',').map(Number);
-                if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) { alert('Invalid start'); return; }
-                if (optimizationJobs.length === 0) { alert('Add at least one job'); return; }
-                const payload = {
-                    jobs: optimizationJobs.map(j => ({ location: j.location })),
-                    vehicles: [{ start: [parts[0], parts[1]] }],
-                    options: { profile: 'driving-car' }
-                };
+                if (parts.length!==2 || isNaN(parts[0]) || isNaN(parts[1])) return;
+                if (optimizationJobs.length===0) { alert('Add jobs'); return; }
+                const payload = { jobs: optimizationJobs.map(j=>({location:j.location})), vehicles:[{start:[parts[0],parts[1]]}], options:{profile:'driving-car'} };
                 try {
                     const resp = await fetch('https://api.openrouteservice.org/optimization', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ORS_TOKEN },
-                        body: JSON.stringify(payload)
+                        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+ORS_TOKEN}, body:JSON.stringify(payload)
                     });
-                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    if (!resp.ok) throw new Error('HTTP '+resp.status);
                     const data = await resp.json();
                     if (data.routes?.length) {
                         routeLayer.clearLayers();
-                        data.routes.forEach((route, idx) => {
-                            L.geoJSON(route.geometry, { style: { color: ['#58a6ff','#f43f5e','#10b981'][idx%3], weight: 5 } }).addTo(routeLayer);
-                        });
-                        L.marker([parts[1], parts[0]]).addTo(routeLayer).bindPopup('Depot');
-                        optimizationJobs.forEach(j => {
-                            L.circleMarker([j.location[1], j.location[0]], { radius: 6, color: '#fff', fillColor: '#f43f5e', fillOpacity: 0.9 }).addTo(routeLayer);
-                        });
+                        data.routes.forEach((route,idx) => L.geoJSON(route.geometry,{style:{color:['#58a6ff','#f43f5e','#10b981'][idx%3],weight:5}}).addTo(routeLayer));
+                        L.marker([parts[1],parts[0]]).addTo(routeLayer).bindPopup('Depot');
+                        optimizationJobs.forEach(j => L.circleMarker([j.location[1],j.location[0]],{radius:6,color:'#fff',fillColor:'#f43f5e',fillOpacity:0.9}).addTo(routeLayer));
                         map.fitBounds(routeLayer.getBounds());
-                    } else alert('No solution.');
-                } catch (e) { console.error(e); alert('Optimization failed: ' + e.message); }
+                    } else alert('No solution');
+                } catch(e) { console.error(e); alert('Optimization failed'); }
             };
-            window.clearOptimization = function() {
-                optimizationJobs = [];
-                renderJobList();
-                routeLayer.clearLayers();
-            };
+            window.clearOptimization = function() { optimizationJobs=[]; renderJobList(); routeLayer.clearLayers(); };
 
-            // ====================== INIT ======================
             window.addEventListener('DOMContentLoaded', () => {
-                console.log('Initializing...');
-                initMap();
-                connectMQTT();
-                fetchInitialData();
-                setInterval(() => {
-                    fetchInitialData();
-                    updateTrayAndStats();
-                    if (selectedVehicleId) updateTelemetryPanel(selectedVehicleId);
-                }, 2000);
+                initMap(); connectMQTT(); fetchInitialData();
+                setInterval(() => { fetchInitialData(); updateTrayAndStats(); if(selectedVehicleId) updateTelemetryPanel(selectedVehicleId); }, 2000);
             });
         })();
     </script>
