@@ -63,7 +63,7 @@
         .geofence-name { font-weight:600; } .geofence-visits { font-size:0.8rem; color:var(--text-secondary); }
         .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:2000; display:none; align-items:center; justify-content:center; }
         .modal-overlay.show { display:flex; }
-        .modal-box { background:var(--glass-bg); backdrop-filter:blur(24px); border:1px solid var(--glass-border); border-radius:24px; width:90%; max-width:620px; max-height:85vh; overflow-y:auto; padding:28px; color:var(--text-primary); box-shadow:0 30px 60px rgba(0,0,0,0.7); }
+        .modal-box { background:var(--glass-bg); backdrop-filter:blur(24px); border:1px solid var(--glass-border); border-radius:24px; width:90%; max-width:750px; max-height:85vh; overflow-y:auto; padding:28px; color:var(--text-primary); box-shadow:0 30px 60px rgba(0,0,0,0.7); }
         .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; } .modal-header h4 { color:var(--accent); font-weight:700; }
         .glass-input { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:12px 16px; width:100%; margin-bottom:12px; font-size:0.9rem; outline:none; } .glass-input:focus { border-color:var(--accent); } .glass-input::placeholder { color:var(--text-secondary); }
         .btn { background:var(--accent); border:none; border-radius:12px; padding:12px 20px; font-weight:600; color:#fff; cursor:pointer; transition:all var(--transition-fast); font-size:0.9rem; display:inline-flex; align-items:center; gap:6px; } .btn:hover { background:#388bfd; }
@@ -71,11 +71,12 @@
         .btn-danger { background:var(--danger); } .btn-danger:hover { background:#ff4d6a; }
         .tab-group { display:flex; gap:6px; margin-bottom:20px; } .tab-btn { flex:1; text-align:center; padding:10px; background:transparent; border:1px solid rgba(255,255,255,0.15); border-radius:10px; cursor:pointer; font-weight:500; font-size:0.85rem; transition:all var(--transition-fast); } .tab-btn.active { background:rgba(31,111,235,0.3); border-color:var(--accent); }
         .fab { position:fixed; bottom:110px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--accent); color:white; display:flex; align-items:center; justify-content:center; font-size:1.3rem; cursor:pointer; z-index:1003; box-shadow:0 8px 25px rgba(31,111,235,0.5); }
-        .speed-limit-control { position:fixed; bottom:110px; left:20px; z-index:1003; background:var(--glass-bg); backdrop-filter:blur(16px); border-radius:16px; padding:10px 15px; border:1px solid var(--glass-border); display:flex; align-items:center; gap:8px; color:var(--text-primary); font-size:0.8rem; }
-        .daily-table { width:100%; border-collapse:collapse; margin-top:20px; }
-        .daily-table th, .daily-table td { padding:12px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
-        .daily-table th { color:var(--text-secondary); font-weight:600; font-size:0.8rem; text-transform:uppercase; }
-        .daily-table td { font-size:0.9rem; }
+        .playback-bar { display:flex; align-items:center; gap:10px; margin:15px 0; background:rgba(255,255,255,0.05); border-radius:12px; padding:10px; }
+        .progress-container { flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; cursor:pointer; }
+        .progress-fill { height:100%; background:var(--accent); border-radius:3px; width:0%; }
+        .daily-table, .trip-table { width:100%; border-collapse:collapse; margin-top:20px; }
+        .daily-table th,.trip-table th,.daily-table td,.trip-table td { padding:12px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
+        .daily-table th,.trip-table th { color:var(--text-secondary); font-weight:600; font-size:0.8rem; text-transform:uppercase; }
     </style>
 </head>
 <body>
@@ -89,6 +90,7 @@
             <div class="icon-btn" onclick="toggleTelemetry()" title="Telemetry"><i class="fas fa-chart-line"></i></div>
             <div class="icon-btn" onclick="toggleGeofencePanel()" title="Geofences"><i class="fas fa-draw-polygon"></i></div>
             <div class="icon-btn" onclick="openDailySummary()" title="Daily Summary"><i class="fas fa-calendar-day"></i></div>
+            <div class="icon-btn" onclick="openTripHistory()" title="Trip History"><i class="fas fa-history"></i></div>
             <div class="icon-btn" id="notifBtn" onclick="requestNotificationPermission()" title="Enable notifications"><i class="fas fa-bell"></i></div>
         </div>
     </div>
@@ -129,24 +131,47 @@
         </div>
     </div>
 
-    <!-- Daily Summary Modal -->
     <div class="modal-overlay" id="dailySummaryModal">
-        <div class="modal-box" style="max-width:700px;">
-            <div class="modal-header">
-                <h4><i class="fas fa-calendar-alt"></i> Fleet Daily Summary</h4>
-                <button class="panel-close-btn" onclick="closeDailySummary()">&times;</button>
-            </div>
+        <div class="modal-box">
+            <div class="modal-header"><h4><i class="fas fa-calendar-alt"></i> Fleet Daily Summary</h4><button class="panel-close-btn" onclick="closeDailySummary()">&times;</button></div>
             <div class="tab-group">
                 <div class="tab-btn active" onclick="switchDailyTab('today')">Today</div>
                 <div class="tab-btn" onclick="switchDailyTab('history')">History</div>
             </div>
             <div id="dailyTodayContent">
+                <button class="btn btn-outline" style="margin-bottom:15px;" onclick="exportDailyCSV()"><i class="fas fa-download"></i> Export CSV</button>
                 <div id="todayTableContainer"></div>
             </div>
             <div id="dailyHistoryContent" style="display:none;">
-                <input type="date" id="historyDateInput" class="glass-input" style="margin-bottom:10px;">
+                <input type="date" id="historyDateInput" class="glass-input">
                 <button class="btn" onclick="fetchHistory()"><i class="fas fa-search"></i> Load</button>
+                <button class="btn btn-outline" style="margin-left:10px;" onclick="exportHistoryCSV()"><i class="fas fa-download"></i> Export CSV</button>
                 <div id="historyTableContainer" style="margin-top:20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="tripHistoryModal">
+        <div class="modal-box">
+            <div class="modal-header"><h4><i class="fas fa-history"></i> Trip History Playback</h4><button class="panel-close-btn" onclick="closeTripHistory()">&times;</button></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+                <select id="tripVehicleSelect" class="glass-input"><option value="">-- Select Vehicle --</option></select>
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="tripFromDate" class="glass-input">
+                    <input type="date" id="tripToDate" class="glass-input">
+                </div>
+            </div>
+            <button class="btn" onclick="loadTrips()"><i class="fas fa-search"></i> Load Trips</button>
+            <button class="btn btn-outline" style="margin-left:10px;" onclick="exportTripsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+            <div id="tripListContainer" style="margin-top:20px;"></div>
+            <div id="playbackControls" style="display:none; margin-top:20px;">
+                <div class="playback-bar">
+                    <button onclick="playPause()"><i id="playIcon" class="fas fa-play"></i></button>
+                    <div class="progress-container" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                    <span id="timeDisplay" style="font-size:0.9rem;">00:00 / 00:00</span>
+                    <select id="playbackSpeed" onchange="changeSpeed()" class="glass-input" style="width:80px;"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select>
+                </div>
+                <div id="tripInfo" style="margin-top:10px; font-size:0.9rem; color:var(--text-secondary);"></div>
             </div>
         </div>
     </div>
@@ -162,10 +187,7 @@
             <div id="tabContentDirections">
                 <input class="glass-input" type="text" id="startInput" placeholder="Start: address or lon,lat">
                 <input class="glass-input" type="text" id="endInput" placeholder="End: address or lon,lat">
-                <div style="display:flex;gap:10px;">
-                    <button class="btn" onclick="getRoute()"><i class="fas fa-search"></i> Get Route</button>
-                    <button class="btn btn-danger" onclick="clearRoute()"><i class="fas fa-trash"></i> Clear</button>
-                </div>
+                <div style="display:flex;gap:10px;"><button class="btn" onclick="getRoute()"><i class="fas fa-search"></i> Get Route</button><button class="btn btn-danger" onclick="clearRoute()">Clear</button></div>
             </div>
             <div id="tabContentGeocoding" style="display:none;">
                 <input class="glass-input" type="text" id="geocodeInput" placeholder="Address (e.g., Harare)">
@@ -176,20 +198,14 @@
                 <p class="small mb-2 text-secondary">Define jobs (lon,lat) and a vehicle start point.</p>
                 <input class="glass-input" type="text" id="vehicleStart" placeholder="Vehicle start: lon,lat">
                 <div id="jobList" class="job-list"></div>
-                <div style="display:flex;gap:10px;">
-                    <input class="glass-input" type="text" id="newJobInput" placeholder="Job: lon,lat">
-                    <button class="btn" style="flex:0;" onclick="addJob()">+</button>
-                </div>
+                <div style="display:flex;gap:10px;"><input class="glass-input" type="text" id="newJobInput" placeholder="Job: lon,lat"><button class="btn" style="flex:0;" onclick="addJob()">+</button></div>
                 <button class="btn mt-3" onclick="solveOptimization()"><i class="fas fa-calculator"></i> Solve VRP</button>
                 <button class="btn btn-danger mt-2" onclick="clearOptimization()">Clear</button>
             </div>
         </div>
     </div>
 
-    <div class="speed-limit-control" id="speedLimitBadge">
-        <i class="fas fa-tachometer-alt"></i> Alert: <span id="speedLimitDisplay">80</span> km/h
-    </div>
-
+    <div class="speed-limit-control" id="speedLimitBadge"><i class="fas fa-tachometer-alt"></i> Alert: <span id="speedLimitDisplay">80</span> km/h</div>
     <div class="fab d-md-none" onclick="toggleTelemetry()"><i class="fas fa-info"></i></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -199,149 +215,42 @@
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script>
         (function() {
+            // ==================== TOKENS & CONFIG ====================
             const FLESPI_TOKEN = '48FRxepUH0koVd147BOIiNhEJmsP4VVoP475grtPqECmp9AfuYrfg1DtB96iUUs5';
+            const FLESPI_TOKEN_TRIPS = '4kBooWLkKybK0TxR2cPSIxgIdbJMwzgHbv6YmZR8Z3aC56p1VTKkMVdxdpHXw5Nr';
             const ORS_TOKEN = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5MDMxNzk0ZDg4ZTQ4NDdhNDc5YWVmMDZhNjM3YTgwIiwiaCI6Im11cm11cjY0In0=";
             const MQTT_BROKER = 'wss://mqtt.flespi.io:443';
             const API_BASE = 'https://flespi.io/gw';
-            // Your calculator ID (from Flespi)
-            const CALC_ID = '3010162';
+            const CALC_DAILY_ID = '3010162';
+            const CALC_TRIPS_ID = '2448154';
 
             let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
             let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
             let vehicleMetadata = {}, vehicleTelemetry = {};
             let selectedVehicleId = null;
             let routeLayer = null;
-            let geofences = [];
-            let drawnItems = new L.FeatureGroup();
-            let straightLineLayer = null;
-            let drawControl = null;
-            let selectedGeofenceId = null;
-            let speedLimit = 80;
-            let notificationsEnabled = false;
+            let geofences = [], drawnItems = new L.FeatureGroup(), straightLineLayer = null, drawControl = null, selectedGeofenceId = null;
+            let speedLimit = 80, notificationsEnabled = false;
+            let playbackInterval = null, playbackPoints = [], playbackIndex = 0, playbackSpeed = 1;
+            let playbackMarker = null, playbackPath = null, loadedTrips = [];
 
-            // ---- PWA & Notifications ----
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js').catch(()=>{});
-                });
-            }
-
+            // ==================== PWA & NOTIFICATIONS ====================
+            if ('serviceWorker' in navigator) window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));
             window.requestNotificationPermission = async function() {
                 if (!('Notification' in window)) return;
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    notificationsEnabled = true;
-                    document.getElementById('notifBtn').classList.add('active');
-                }
+                const perm = await Notification.requestPermission();
+                if (perm === 'granted') { notificationsEnabled = true; document.getElementById('notifBtn').classList.add('active'); }
             };
-
             function sendNotification(title, body) {
                 if (!notificationsEnabled || Notification.permission !== 'granted') return;
                 new Notification(title, { body });
             }
-
             window.setSpeedLimit = function() {
                 const val = parseInt(document.getElementById('speedLimitInput').value, 10);
-                if (val > 0) {
-                    speedLimit = val;
-                    document.getElementById('speedLimitDisplay').textContent = val;
-                }
+                if (val > 0) { speedLimit = val; document.getElementById('speedLimitDisplay').textContent = val; }
             };
 
-            // ---- Daily Summary ----
-            window.openDailySummary = function() {
-                document.getElementById('dailySummaryModal').classList.add('show');
-                renderTodayTable();
-            };
-            window.closeDailySummary = function() {
-                document.getElementById('dailySummaryModal').classList.remove('show');
-            };
-            window.switchDailyTab = function(tab) {
-                document.querySelectorAll('#dailyTodayContent, #dailyHistoryContent').forEach(el => el.style.display = 'none');
-                document.querySelectorAll('#dailySummaryModal .tab-btn').forEach(btn => btn.classList.remove('active'));
-                if (tab === 'today') {
-                    document.getElementById('dailyTodayContent').style.display = 'block';
-                    document.getElementById('dailySummaryModal').querySelector('.tab-btn:nth-child(1)').classList.add('active');
-                    renderTodayTable();
-                } else {
-                    document.getElementById('dailyHistoryContent').style.display = 'block';
-                    document.getElementById('dailySummaryModal').querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                    // Set default date to today
-                    document.getElementById('historyDateInput').value = new Date().toISOString().split('T')[0];
-                }
-            };
-
-            function renderTodayTable() {
-                const container = document.getElementById('todayTableContainer');
-                const ids = Object.keys(dailySummaries);
-                if (ids.length === 0) {
-                    container.innerHTML = '<p class="text-secondary">No daily data yet. Waiting for first calculator update...</p>';
-                    return;
-                }
-                let html = `<table class="daily-table"><thead><tr>
-                    <th>Vehicle</th><th>Mileage (km)</th><th>Driving Hours</th><th>Harsh Events</th><th>Max Speed</th><th>Date</th>
-                </tr></thead><tbody>`;
-                ids.forEach(id => {
-                    const d = dailySummaries[id];
-                    const name = vehicleMetadata[id]?.name || id;
-                    html += `<tr>
-                        <td><strong>${name}</strong></td>
-                        <td>${d.total_mileage_km.toFixed(1)}</td>
-                        <td>${d.driving_hours.toFixed(1)}</td>
-                        <td>${d.harsh_events_total}</td>
-                        <td>${d.max_speed_kmh.toFixed(0)}</td>
-                        <td>${d.date || 'today'}</td>
-                    </tr>`;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            }
-
-            // Fetch historical intervals via REST
-            window.fetchHistory = async function() {
-                const dateVal = document.getElementById('historyDateInput').value;
-                if (!dateVal) return;
-                const begin = Math.floor(new Date(dateVal + 'T00:00:00+02:00').getTime() / 1000);
-                const end = Math.floor(new Date(dateVal + 'T23:59:59+02:00').getTime() / 1000);
-                const container = document.getElementById('historyTableContainer');
-                container.innerHTML = '<p>Loading history...</p>';
-                try {
-                    const resp = await fetch(
-                        `${API_BASE}/calcs/${CALC_ID}/devices/all/intervals/all?data=${encodeURIComponent(JSON.stringify({begin,end,fields:"date,total_mileage_km,driving_hours,harsh_events_total,max_speed_kmh"}))}`,
-                        { headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN } }
-                    );
-                    const data = await resp.json();
-                    const intervals = data.result || [];
-                    if (intervals.length === 0) {
-                        container.innerHTML = '<p class="text-secondary">No data for that date.</p>';
-                        return;
-                    }
-                    let html = `<table class="daily-table"><thead><tr>
-                        <th>Vehicle ID</th><th>Mileage (km)</th><th>Driving Hours</th><th>Harsh Events</th><th>Max Speed</th><th>Date</th>
-                    </tr></thead><tbody>`;
-                    intervals.forEach(interval => {
-                        const deviceId = interval.device_id || interval.id;
-                        const d = interval;
-                        html += `<tr>
-                            <td>${vehicleMetadata[deviceId]?.name || deviceId}</td>
-                            <td>${(d.total_mileage_km||0).toFixed(1)}</td>
-                            <td>${(d.driving_hours||0).toFixed(1)}</td>
-                            <td>${d.harsh_events_total||0}</td>
-                            <td>${(d.max_speed_kmh||0).toFixed(0)}</td>
-                            <td>${d.date || dateVal}</td>
-                        </tr>`;
-                    });
-                    html += '</tbody></table>';
-                    container.innerHTML = html;
-                } catch(e) {
-                    container.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
-                }
-            };
-
-            // ---- Existing functions (unchanged except for adding daily summary auto-refresh) ----
-            function loadGeofences() { try { const saved = localStorage.getItem('sentinel_geofences'); if (saved) { geofences = JSON.parse(saved).map(g => ({...g, vehicleVisits: g.vehicleVisits||{}, inGeofenceState: g.inGeofenceState||{}})); renderGeofencesOnMap(); } } catch(e){} }
-            function saveGeofences() { localStorage.setItem('sentinel_geofences', JSON.stringify(geofences)); }
-
+            // ==================== MAP INIT ====================
             function initMap() {
                 satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
                 labelLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.7 });
@@ -351,38 +260,62 @@
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 routeLayer = L.layerGroup().addTo(map);
                 drawnItems.addTo(map);
-                [{ name: 'Harare Central', lat: -17.8252, lng: 31.0335 }, { name: 'Bulawayo Depot', lat: -20.1457, lng: 28.5873 }, { name: 'Mutare Branch', lat: -18.9758, lng: 32.6695 }].forEach(d => L.circleMarker([d.lat, d.lng], { radius: 6, fillColor: '#1f6feb', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(map).bindTooltip(d.name));
+                [{name:'Harare Central',lat:-17.8252,lng:31.0335},{name:'Bulawayo Depot',lat:-20.1457,lng:28.5873},{name:'Mutare Branch',lat:-18.9758,lng:32.6695}].forEach(d => L.circleMarker([d.lat,d.lng], {radius:6, fillColor:'#1f6feb', color:'#fff', weight:2, fillOpacity:0.9}).addTo(map).bindTooltip(d.name));
                 loadGeofences();
             }
 
-            window.toggleSatellite = function() { isSatellite = !isSatellite; const btn = document.getElementById('satelliteBtn'); if (isSatellite) { map.addLayer(hybridGroup); btn.classList.add('active'); } else { map.removeLayer(hybridGroup); btn.classList.remove('active'); } };
-            function createPinIcon() { return L.divIcon({ className: '', html: '<div style="width:32px;height:50px;"><div style="width:24px;height:24px;background:#1f6feb;border-radius:50%;border:3px solid white;margin:0 auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);"></div><div style="width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:16px solid #1f6feb;margin:-2px auto 0;"></div></div>', iconSize: [32, 50], iconAnchor: [16, 48], popupAnchor: [0, -40] }); }
+            window.toggleSatellite = function() { isSatellite = !isSatellite; const btn = document.getElementById('satelliteBtn'); if(isSatellite){ map.addLayer(hybridGroup); btn.classList.add('active'); } else{ map.removeLayer(hybridGroup); btn.classList.remove('active'); } };
+            function createPinIcon() { return L.divIcon({ className:'', html:'<div style="width:32px;height:50px;"><div style="width:24px;height:24px;background:#1f6feb;border-radius:50%;border:3px solid white;margin:0 auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);"></div><div style="width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:16px solid #1f6feb;margin:-2px auto 0;"></div></div>', iconSize:[32,50], iconAnchor:[16,48], popupAnchor:[0,-40] }); }
             window.toggleTray = function() { document.getElementById('vehicleTray').classList.toggle('open'); };
             window.toggleTelemetry = function() { document.getElementById('telemetryPanel').classList.toggle('open'); };
             window.toggleGeofencePanel = function() { document.getElementById('geofencePanel').classList.toggle('open'); renderGeofenceList(); };
 
             function updateTelemetryPanel(id) {
-                if (!id) { document.getElementById('panelTitle').innerHTML = '<i class="fas fa-microchip"></i> Select a vehicle'; document.getElementById('telSpeed').textContent='0'; document.getElementById('telMileage').textContent='0'; document.getElementById('telEvents').textContent='0'; document.getElementById('telSignal').textContent='--'; document.getElementById('signalFill').style.width='0%'; document.getElementById('telAccelX').textContent='0'; document.getElementById('telAccelY').textContent='0'; document.getElementById('telExtra').innerHTML=''; return; }
-                const meta = vehicleMetadata[id] || { name: 'Vehicle '+id }, pos = vehiclePositions[id], daily = dailySummaries[id], telem = vehicleTelemetry[id] || {};
+                if (!id) {
+                    document.getElementById('panelTitle').innerHTML = '<i class="fas fa-microchip"></i> Select a vehicle';
+                    document.getElementById('telSpeed').textContent = '0'; document.getElementById('telMileage').textContent = '0';
+                    document.getElementById('telEvents').textContent = '0'; document.getElementById('telSignal').textContent = '--';
+                    document.getElementById('signalFill').style.width = '0%'; document.getElementById('telAccelX').textContent = '0';
+                    document.getElementById('telAccelY').textContent = '0'; document.getElementById('telExtra').innerHTML = '';
+                    return;
+                }
+                const meta = vehicleMetadata[id] || { name: 'Vehicle ' + id };
+                const pos = vehiclePositions[id];
+                const daily = dailySummaries[id];
+                const telem = vehicleTelemetry[id] || {};
                 document.getElementById('panelTitle').innerHTML = `<i class="fas fa-microchip"></i> ${meta.name}`;
                 document.getElementById('telSpeed').textContent = pos ? pos.speed.toFixed(1) : '0';
                 document.getElementById('telMileage').textContent = daily ? daily.total_mileage_km.toFixed(1) : '0';
                 document.getElementById('telEvents').textContent = daily ? daily.harsh_events_total : '0';
                 let sigPct = 0;
-                if (telem.signal !== undefined) sigPct = (typeof telem.signal === 'number' && telem.signal <= 100) ? telem.signal : Math.round((telem.signal/31)*100);
-                document.getElementById('telSignal').textContent = sigPct+'%'; document.getElementById('signalFill').style.width = sigPct+'%';
-                document.getElementById('telAccelX').textContent = (telem.accelX||0).toFixed(3);
-                document.getElementById('telAccelY').textContent = (telem.accelY||0).toFixed(3);
-                document.getElementById('telExtra').innerHTML = `Updated: ${daily?daily.timestamp:'--'}<br>ID: ${id}`;
+                if (telem.signal !== undefined) sigPct = (typeof telem.signal === 'number' && telem.signal <= 100) ? telem.signal : Math.round((telem.signal / 31) * 100);
+                document.getElementById('telSignal').textContent = sigPct + '%';
+                document.getElementById('signalFill').style.width = sigPct + '%';
+                document.getElementById('telAccelX').textContent = (telem.accelX || 0).toFixed(3);
+                document.getElementById('telAccelY').textContent = (telem.accelY || 0).toFixed(3);
+                document.getElementById('telExtra').innerHTML = `Updated: ${daily ? daily.timestamp : '--'}<br>ID: ${id}`;
             }
 
-            window.selectVehicle = function(id) { selectedVehicleId = id; document.querySelectorAll('.vehicle-row').forEach(el => el.classList.remove('selected')); const item = document.querySelector(`.vehicle-row[data-id="${id}"]`); if(item) item.classList.add('selected'); const pos = vehiclePositions[id]; if(pos) { map.flyTo([pos.lat, pos.lng], 15, {duration:0.8}); if(vehicleMarkers[id]) vehicleMarkers[id].openPopup(); } updateTelemetryPanel(id); document.getElementById('telemetryPanel').classList.add('open'); if(selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId); };
+            window.selectVehicle = function(id) {
+                selectedVehicleId = id;
+                document.querySelectorAll('.vehicle-row').forEach(el => el.classList.remove('selected'));
+                const item = document.querySelector(`.vehicle-row[data-id="${id}"]`);
+                if (item) item.classList.add('selected');
+                const pos = vehiclePositions[id];
+                if (pos) {
+                    map.flyTo([pos.lat, pos.lng], 15, { duration: 0.8 });
+                    if (vehicleMarkers[id]) vehicleMarkers[id].openPopup();
+                }
+                updateTelemetryPanel(id);
+                document.getElementById('telemetryPanel').classList.add('open');
+                if (selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId);
+            };
 
             function connectMQTT() {
-                mqttClient = mqtt.connect(MQTT_BROKER, { username: FLESPI_TOKEN, password: '', clientId: 'sentinel_'+Math.random().toString(16).substr(2,8), clean: true, reconnectPeriod: 5000 });
+                mqttClient = mqtt.connect(MQTT_BROKER, { username: FLESPI_TOKEN, password: '', clientId: 'sentinel_' + Math.random().toString(16).substr(2,8), clean: true, reconnectPeriod: 5000 });
                 mqttClient.on('connect', () => { console.log('MQTT connected');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/position');
-                    mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last'); // catches all calculators, including 3010162
+                    mqttClient.subscribe('flespi/state/gw/calcs/+/devices/+/last');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.x');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.y');
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/accelerometer.z');
@@ -391,90 +324,145 @@
                     mqttClient.subscribe('flespi/state/gw/devices/+/telemetry/network.type');
                 });
                 mqttClient.on('message', (topic, payload) => { try {
-                    const data = JSON.parse(payload.toString()); const parts = topic.split('/'), deviceId = parts[4]; const value = data.value !== undefined ? data.value : data;
-                    if(topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
-                    else if(topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
-                    else if(topic.includes('accelerometer.x')) storeTelemetry(deviceId, 'accelX', value);
-                    else if(topic.includes('accelerometer.y')) storeTelemetry(deviceId, 'accelY', value);
-                    else if(topic.includes('accelerometer.z')) storeTelemetry(deviceId, 'accelZ', value);
-                    else if(topic.includes('gsm.signal.level') || topic.includes('/sig')) { let sv = value; if(typeof sv === 'number' && sv <= 31) sv = Math.round((sv/31)*100); storeTelemetry(deviceId, 'signal', sv); }
-                    else if(topic.includes('network.type')) storeTelemetry(deviceId, 'network', value);
-                } catch(e){} });
+                    const data = JSON.parse(payload.toString()); const parts = topic.split('/'), deviceId = parts[4];
+                    const value = data.value !== undefined ? data.value : data;
+                    if (topic.includes('/telemetry/position') && !topic.includes('signal')) handlePosition(deviceId, data);
+                    else if (topic.includes('/calcs/') && topic.endsWith('/last')) handleSummary(parts[6], data);
+                    else if (topic.includes('accelerometer.x')) storeTelemetry(deviceId, 'accelX', value);
+                    else if (topic.includes('accelerometer.y')) storeTelemetry(deviceId, 'accelY', value);
+                    else if (topic.includes('accelerometer.z')) storeTelemetry(deviceId, 'accelZ', value);
+                    else if (topic.includes('gsm.signal.level') || topic.includes('/sig')) { let sv = value; if (typeof sv === 'number' && sv <= 31) sv = Math.round((sv/31)*100); storeTelemetry(deviceId, 'signal', sv); }
+                    else if (topic.includes('network.type')) storeTelemetry(deviceId, 'network', value);
+                } catch(e) {} });
             }
 
-            function storeTelemetry(id, key, val) { if(!vehicleTelemetry[id]) vehicleTelemetry[id] = {}; vehicleTelemetry[id][key] = val; if(!vehicleMetadata[id]) { vehicleMetadata[id] = { name: 'Vehicle '+id, id }; updateTrayAndStats(); } if(selectedVehicleId === id) updateTelemetryPanel(id); }
+            function storeTelemetry(id, key, val) { if(!vehicleTelemetry[id]) vehicleTelemetry[id] = {}; vehicleTelemetry[id][key] = val; if(!vehicleMetadata[id]){ vehicleMetadata[id] = { name: 'Vehicle '+id, id }; updateTrayAndStats(); } if(selectedVehicleId === id) updateTelemetryPanel(id); }
 
             function handlePosition(id, data) {
                 const lat = data['position.latitude'] || data.latitude, lng = data['position.longitude'] || data.longitude;
-                if(lat && lng) {
+                if (lat && lng) {
                     const speed = data['position.speed'] || data.speed || 0;
                     vehiclePositions[id] = { lat, lng, speed, timestamp: new Date().toLocaleTimeString() };
-                    if(!vehicleMetadata[id]) vehicleMetadata[id] = { name: data['device.name'] || ('Vehicle '+id), id };
+                    if (!vehicleMetadata[id]) vehicleMetadata[id] = { name: data['device.name'] || ('Vehicle ' + id), id };
                     updateMarker(id); updateTrayAndStats();
-                    if(selectedVehicleId === id) updateTelemetryPanel(id);
+                    if (selectedVehicleId === id) updateTelemetryPanel(id);
                     checkGeofenceEntries(id, lat, lng);
-                    if(selectedVehicleId === id && selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId);
-                    if(speed > speedLimit && speedLimit > 0 && notificationsEnabled) sendNotification('Speeding Alert', `${vehicleMetadata[id]?.name||id} doing ${speed.toFixed(1)} km/h`);
+                    if (selectedVehicleId === id && selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId);
+                    if (speed > speedLimit && speedLimit > 0 && notificationsEnabled) sendNotification('Speeding Alert', `${vehicleMetadata[id]?.name||id} doing ${speed.toFixed(1)} km/h`);
                 }
             }
 
             function handleSummary(id, data) {
-                dailySummaries[id] = {
-                    total_mileage_km: data.total_mileage_km || 0,
-                    driving_hours: data.driving_hours || 0,
-                    max_speed_kmh: data.max_speed_kmh || 0,
-                    harsh_events_total: data.harsh_events_total || 0,
-                    date: data.date || '',
-                    timestamp: new Date().toLocaleTimeString()
-                };
-                if(!vehicleMetadata[id]) vehicleMetadata[id] = { name: 'Vehicle '+id, id };
-                updateTrayAndStats();
-                if(selectedVehicleId === id) updateTelemetryPanel(id);
-                // Auto-refresh daily summary if modal is open
-                if(document.getElementById('dailySummaryModal').classList.contains('show') &&
-                   document.getElementById('dailyTodayContent').style.display !== 'none') {
-                    renderTodayTable();
-                }
+                dailySummaries[id] = { total_mileage_km: data.total_mileage_km || 0, driving_hours: data.driving_hours || 0, max_speed_kmh: data.max_speed_kmh || 0, harsh_events_total: data.harsh_events_total || 0, date: data.date || '', timestamp: new Date().toLocaleTimeString() };
+                if (!vehicleMetadata[id]) vehicleMetadata[id] = { name: 'Vehicle ' + id, id };
+                updateTrayAndStats(); if (selectedVehicleId === id) updateTelemetryPanel(id);
+                if (document.getElementById('dailySummaryModal').classList.contains('show') && document.getElementById('dailyTodayContent').style.display !== 'none') renderTodayTable();
             }
 
-            function updateMarker(id) { const pos = vehiclePositions[id]; if(!pos) return; if(vehicleMarkers[id]) vehicleMarkers[id].setLatLng([pos.lat, pos.lng]); else { const marker = L.marker([pos.lat, pos.lng], { icon: createPinIcon() }).addTo(map); marker.bindPopup(`<b>${vehicleMetadata[id]?.name||'Vehicle'}</b><br>Speed: ${pos.speed.toFixed(1)} km/h`); marker.on('click', ()=>selectVehicle(id)); vehicleMarkers[id] = marker; } }
+            function updateMarker(id) {
+                const pos = vehiclePositions[id]; if (!pos) return;
+                if (vehicleMarkers[id]) { vehicleMarkers[id].setLatLng([pos.lat, pos.lng]); }
+                else { const marker = L.marker([pos.lat, pos.lng], { icon: createPinIcon() }).addTo(map); marker.bindPopup(`<b>${vehicleMetadata[id]?.name||'Vehicle'}</b><br>Speed: ${pos.speed.toFixed(1)} km/h`); marker.on('click', ()=> selectVehicle(id)); vehicleMarkers[id] = marker; }
+            }
 
-            function updateTrayAndStats() { const ids = Object.keys(vehicleMetadata); document.getElementById('trayCount').textContent = ids.length; const trayContent = document.getElementById('trayContent'); if(ids.length===0) { trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-secondary);">No vehicles detected</div>'; return; } let html = ''; ids.forEach(id => { const meta = vehicleMetadata[id], pos = vehiclePositions[id], isLive = !!pos, speed = pos?pos.speed.toFixed(1):'0', daily = dailySummaries[id], mileage = daily?daily.total_mileage_km.toFixed(1):'0', initials = (meta.name||id).substring(0,2).toUpperCase(); html += `<div class="vehicle-row ${selectedVehicleId===id?'selected':''}" data-id="${id}" onclick="selectVehicle('${id}')"><div class="vehicle-avatar">${initials}</div><div class="vehicle-info"><div class="vehicle-name">${meta.name}</div><div class="vehicle-stats"><span><i class="fas fa-tachometer-alt"></i> ${speed} km/h</span><span><i class="fas fa-road"></i> ${mileage} km</span></div></div><div class="vehicle-status">${isLive?'<span class="status-dot status-live"></span> Live':'<span class="status-dot status-offline"></span> Offline'}</div></div>`; }); trayContent.innerHTML = html; }
+            function updateTrayAndStats() {
+                const ids = Object.keys(vehicleMetadata); document.getElementById('trayCount').textContent = ids.length;
+                const trayContent = document.getElementById('trayContent');
+                if (ids.length === 0) { trayContent.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-secondary);">No vehicles detected</div>'; return; }
+                let html = '';
+                ids.forEach(id => {
+                    const meta = vehicleMetadata[id], pos = vehiclePositions[id], isLive = !!pos;
+                    const speed = pos ? pos.speed.toFixed(1) : '0', daily = dailySummaries[id], mileage = daily ? daily.total_mileage_km.toFixed(1) : '0';
+                    const initials = (meta.name || id).substring(0,2).toUpperCase();
+                    html += `<div class="vehicle-row ${selectedVehicleId===id?'selected':''}" data-id="${id}" onclick="selectVehicle('${id}')">
+                        <div class="vehicle-avatar">${initials}</div>
+                        <div class="vehicle-info"><div class="vehicle-name">${meta.name}</div><div class="vehicle-stats"><span><i class="fas fa-tachometer-alt"></i> ${speed} km/h</span><span><i class="fas fa-road"></i> ${mileage} km</span></div></div>
+                        <div class="vehicle-status">${isLive?'<span class="status-dot status-live"></span> Live':'<span class="status-dot status-offline"></span> Offline'}</div>
+                    </div>`;
+                });
+                trayContent.innerHTML = html;
+            }
 
-            async function fetchInitialData() { try { const resp = await fetch(API_BASE+'/devices/all', { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN } }); const data = await resp.json(); (data.result||[]).forEach(d => { if(!vehicleMetadata[d.id]) vehicleMetadata[d.id] = { name: d.name||'Vehicle '+d.id, id: d.id }; }); updateTrayAndStats(); } catch(e){} }
+            async function fetchInitialData() { try { const resp = await fetch(API_BASE+'/devices/all', { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN } }); const data = await resp.json(); (data.result||[]).forEach(d => { if(!vehicleMetadata[d.id]) vehicleMetadata[d.id] = { name: d.name||'Vehicle '+d.id, id: d.id }; }); updateTrayAndStats(); populateTripVehicleSelect(); } catch(e) {} }
 
-            // ---- Geofence ----
+            // ==================== GEOFENCES ====================
+            function loadGeofences() { try { const saved = localStorage.getItem('sentinel_geofences'); if (saved) { geofences = JSON.parse(saved).map(g => ({...g, vehicleVisits: g.vehicleVisits||{}, inGeofenceState: g.inGeofenceState||{}})); renderGeofencesOnMap(); } } catch(e){} }
+            function saveGeofences() { localStorage.setItem('sentinel_geofences', JSON.stringify(geofences)); }
             window.selectGeofence = function(gid) { selectedGeofenceId=gid; renderGeofenceList(); if(selectedVehicleId) drawStraightLineToGeofence(gid); };
-            function drawStraightLineToGeofence(gid) { if(straightLineLayer){map.removeLayer(straightLineLayer);straightLineLayer=null;} const gf = geofences.find(g=>g.id===gid); if(!gf||!selectedVehicleId) return; const pos=vehiclePositions[selectedVehicleId]; if(!pos) return; const center=getGeofenceCenter(gf); if(!center) return; straightLineLayer=L.polyline([[pos.lat,pos.lng],[center.lat,center.lng]],{color:'#f43f5e',weight:2,dashArray:'6 8'}).addTo(map); const dist=(map.distance([pos.lat,pos.lng],[center.lat,center.lng])/1000).toFixed(2); straightLineLayer.bindPopup(`Straight line to ${gf.name}<br>Distance: ${dist} km`).openPopup(); }
-            function getGeofenceCenter(gf) { if(gf.type==='circle') return gf.center; if(gf.type==='polygon'||gf.type==='rectangle') { try { const coords=gf.coordinates[0].map(c=>[c.lng,c.lat]); const poly=turf.polygon([coords]); const centroid=turf.centroid(poly); return {lat:centroid.geometry.coordinates[1],lng:centroid.geometry.coordinates[0]}; } catch(e){} } return null; }
-            function isPointInsideGeofence(lat,lng,gf) { if(gf.type==='circle') return map.distance([lat,lng],[gf.center.lat,gf.center.lng])<=gf.radius; if(gf.type==='polygon'||gf.type==='rectangle') { const point=turf.point([lng,lat]); const polygon=turf.polygon([gf.coordinates[0].map(c=>[c.lng,c.lat])]); return turf.booleanPointInPolygon(point,polygon); } return false; }
-            function checkGeofenceEntries(vehicleId,lat,lng) { geofences.forEach(gf=>{ const inside=isPointInsideGeofence(lat,lng,gf); const state=gf.inGeofenceState[vehicleId]||false; if(inside&&!state) { gf.vehicleVisits[vehicleId]=(gf.vehicleVisits[vehicleId]||0)+1; gf.inGeofenceState[vehicleId]=true; saveGeofences(); renderGeofenceList(); if(notificationsEnabled) sendNotification('Geofence Entry', `${vehicleMetadata[vehicleId]?.name||vehicleId} entered ${gf.name}`); } else if(!inside&&state) { gf.inGeofenceState[vehicleId]=false; saveGeofences(); } }); }
-            function renderGeofencesOnMap() { drawnItems.clearLayers(); geofences.forEach(gf=>{ let layer; if(gf.type==='circle') layer=L.circle([gf.center.lat,gf.center.lng],{radius:gf.radius,color:'#58a6ff',fillOpacity:0.1}); else layer=L.polygon(gf.coordinates[0].map(c=>[c.lat,c.lng]),{color:'#58a6ff',fillOpacity:0.1}); layer.bindPopup(`<b>${gf.name}</b>`); layer.on('click',()=>selectGeofence(gf.id)); drawnItems.addLayer(layer); }); }
-            function renderGeofenceList() { const container=document.getElementById('geofenceList'); if(!geofences.length){container.innerHTML='<p class="text-secondary small">No geofences.</p>';return;} let html=''; geofences.forEach(gf=>{ let visitsHtml=''; Object.keys(gf.vehicleVisits).forEach(vid=>{ visitsHtml+=`<div>${vehicleMetadata[vid]?.name||vid}: ${gf.vehicleVisits[vid]} visits</div>`; }); if(!visitsHtml) visitsHtml='<div>No visits yet</div>'; html+=`<div class="geofence-list-item ${selectedGeofenceId===gf.id?'selected':''}" onclick="selectGeofence('${gf.id}')"><div class="geofence-name">${gf.name} (${gf.type})</div><div class="geofence-visits">${visitsHtml}</div></div>`; }); container.innerHTML=html; }
-            window.startDrawGeofence = function() { if(!map.hasLayer(drawnItems)) map.addLayer(drawnItems); new L.Draw.Circle(map,{}).enable(); new L.Draw.Polygon(map,{}).enable(); new L.Draw.Rectangle(map,{}).enable(); map.once('draw:created',function(e){ const layer=e.layer,type=e.layerType; const name=prompt('Geofence name:','Zone '+(geofences.length+1))||'Zone '+(geofences.length+1); let gf={id:Date.now().toString(),name,type,vehicleVisits:{},inGeofenceState:{}}; if(type==='circle'){gf.center=layer.getLatLng();gf.radius=layer.getRadius();} else gf.coordinates=layer.getLatLngs(); geofences.push(gf);saveGeofences();renderGeofencesOnMap();renderGeofenceList(); }); };
+            function drawStraightLineToGeofence(gid) { if(straightLineLayer) { map.removeLayer(straightLineLayer); straightLineLayer=null; } const gf = geofences.find(g=>g.id===gid); if(!gf||!selectedVehicleId) return; const pos = vehiclePositions[selectedVehicleId]; if(!pos) return; const center = getGeofenceCenter(gf); if(!center) return; straightLineLayer = L.polyline([[pos.lat,pos.lng],[center.lat,center.lng]], { color:'#f43f5e', weight:2, dashArray:'6 8' }).addTo(map); const dist=(map.distance([pos.lat,pos.lng],[center.lat,center.lng])/1000).toFixed(2); straightLineLayer.bindPopup(`Straight line to ${gf.name}<br>Distance: ${dist} km`).openPopup(); }
+            function getGeofenceCenter(gf) { if(gf.type==='circle') return gf.center; if(gf.type==='polygon'||gf.type==='rectangle') { try { const coords = gf.coordinates[0].map(c=>[c.lng,c.lat]); const poly = turf.polygon([coords]); const centroid = turf.centroid(poly); return { lat: centroid.geometry.coordinates[1], lng: centroid.geometry.coordinates[0] }; } catch(e){} } return null; }
+            function isPointInsideGeofence(lat,lng,gf) { if(gf.type==='circle') return map.distance([lat,lng],[gf.center.lat,gf.center.lng]) <= gf.radius; if(gf.type==='polygon'||gf.type==='rectangle') { const point = turf.point([lng,lat]); const polygon = turf.polygon([gf.coordinates[0].map(c=>[c.lng,c.lat])]); return turf.booleanPointInPolygon(point, polygon); } return false; }
+            function checkGeofenceEntries(vehicleId,lat,lng) { geofences.forEach(gf => { const inside = isPointInsideGeofence(lat,lng,gf); const state = gf.inGeofenceState[vehicleId] || false; if(inside && !state) { gf.vehicleVisits[vehicleId] = (gf.vehicleVisits[vehicleId]||0)+1; gf.inGeofenceState[vehicleId] = true; saveGeofences(); renderGeofenceList(); if(notificationsEnabled) sendNotification('Geofence Entry', `${vehicleMetadata[vehicleId]?.name||vehicleId} entered ${gf.name}`); } else if(!inside && state) { gf.inGeofenceState[vehicleId] = false; saveGeofences(); } }); }
+            function renderGeofencesOnMap() { drawnItems.clearLayers(); geofences.forEach(gf => { let layer; if(gf.type==='circle') layer = L.circle([gf.center.lat,gf.center.lng], { radius: gf.radius, color:'#58a6ff', fillOpacity:0.1 }); else layer = L.polygon(gf.coordinates[0].map(c=>[c.lat,c.lng]), { color:'#58a6ff', fillOpacity:0.1 }); layer.bindPopup(`<b>${gf.name}</b>`); layer.on('click', ()=> selectGeofence(gf.id)); drawnItems.addLayer(layer); }); }
+            function renderGeofenceList() { const container = document.getElementById('geofenceList'); if(!geofences.length) { container.innerHTML = '<p class="text-secondary small">No geofences.</p>'; return; } let html=''; geofences.forEach(gf => { let visitsHtml=''; Object.keys(gf.vehicleVisits).forEach(vid => { visitsHtml += `<div>${vehicleMetadata[vid]?.name||vid}: ${gf.vehicleVisits[vid]} visits</div>`; }); if(!visitsHtml) visitsHtml = '<div>No visits yet</div>'; html += `<div class="geofence-list-item ${selectedGeofenceId===gf.id?'selected':''}" onclick="selectGeofence('${gf.id}')"><div class="geofence-name">${gf.name} (${gf.type})</div><div class="geofence-visits">${visitsHtml}</div></div>`; }); container.innerHTML = html; }
+            window.startDrawGeofence = function() { if(!map.hasLayer(drawnItems)) map.addLayer(drawnItems); new L.Draw.Circle(map,{}).enable(); new L.Draw.Polygon(map,{}).enable(); new L.Draw.Rectangle(map,{}).enable(); map.once('draw:created', function(e) { const layer = e.layer, type = e.layerType; const name = prompt('Geofence name:', 'Zone '+(geofences.length+1))||'Zone '+(geofences.length+1); let gf = { id: Date.now().toString(), name, type, vehicleVisits:{}, inGeofenceState:{} }; if(type==='circle') { gf.center = layer.getLatLng(); gf.radius = layer.getRadius(); } else gf.coordinates = layer.getLatLngs(); geofences.push(gf); saveGeofences(); renderGeofencesOnMap(); renderGeofenceList(); }); };
 
-            // ---- Route & optimisation ----
+            // ==================== DAILY SUMMARY ====================
+            window.openDailySummary = function() { document.getElementById('dailySummaryModal').classList.add('show'); renderTodayTable(); };
+            window.closeDailySummary = function() { document.getElementById('dailySummaryModal').classList.remove('show'); };
+            window.switchDailyTab = function(tab) {
+                document.getElementById('dailyTodayContent').style.display = 'none'; document.getElementById('dailyHistoryContent').style.display = 'none';
+                document.querySelectorAll('#dailySummaryModal .tab-btn').forEach(btn => btn.classList.remove('active'));
+                if(tab==='today') { document.getElementById('dailyTodayContent').style.display = 'block'; document.querySelector('#dailySummaryModal .tab-btn:nth-child(1)').classList.add('active'); renderTodayTable(); }
+                else { document.getElementById('dailyHistoryContent').style.display = 'block'; document.querySelector('#dailySummaryModal .tab-btn:nth-child(2)').classList.add('active'); document.getElementById('historyDateInput').value = new Date().toISOString().split('T')[0]; }
+            };
+            function renderTodayTable() {
+                const ids = Object.keys(dailySummaries); const container = document.getElementById('todayTableContainer');
+                if(ids.length===0) { container.innerHTML = '<p class="text-secondary">No daily data yet.</p>'; return; }
+                let html = `<table class="daily-table"><thead><tr><th>Vehicle</th><th>Mileage (km)</th><th>Driving Hours</th><th>Harsh Events</th><th>Max Speed</th><th>Date</th></tr></thead><tbody>`;
+                ids.forEach(id => { const d = dailySummaries[id], name = vehicleMetadata[id]?.name||id; html += `<tr><td><strong>${name}</strong></td><td>${d.total_mileage_km.toFixed(1)}</td><td>${d.driving_hours.toFixed(1)}</td><td>${d.harsh_events_total}</td><td>${d.max_speed_kmh.toFixed(0)}</td><td>${d.date||'today'}</td></tr>`; });
+                html += '</tbody></table>'; container.innerHTML = html;
+            }
+            window.fetchHistory = async function() {
+                const dateVal = document.getElementById('historyDateInput').value; if(!dateVal) return;
+                const begin = Math.floor(new Date(dateVal+'T00:00:00+02:00').getTime()/1000);
+                const end = Math.floor(new Date(dateVal+'T23:59:59+02:00').getTime()/1000);
+                const container = document.getElementById('historyTableContainer'); container.innerHTML = '<p>Loading...</p>';
+                try { const resp = await fetch(`${API_BASE}/calcs/${CALC_DAILY_ID}/devices/all/intervals/all?data=${encodeURIComponent(JSON.stringify({begin,end,fields:"date,total_mileage_km,driving_hours,harsh_events_total,max_speed_kmh"}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN } }); const data = await resp.json(); const intervals = data.result||[]; if(intervals.length===0){ container.innerHTML='<p>No data for that date.</p>'; return; } let html = `<table class="daily-table"><thead><tr><th>Vehicle ID</th><th>Mileage (km)</th><th>Driving Hours</th><th>Harsh Events</th><th>Max Speed</th><th>Date</th></tr></thead><tbody>`; intervals.forEach(interval => { html += `<tr><td>${vehicleMetadata[interval.device_id]?.name||interval.device_id}</td><td>${(interval.total_mileage_km||0).toFixed(1)}</td><td>${(interval.driving_hours||0).toFixed(1)}</td><td>${interval.harsh_events_total||0}</td><td>${(interval.max_speed_kmh||0).toFixed(0)}</td><td>${interval.date||dateVal}</td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; } catch(e) { container.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`; }
+            };
+            function downloadCSV(filename, rows, headers) { let csv = headers.join(',') + '\n'; rows.forEach(row => { csv += headers.map(h => row[h]||'').join(',') + '\n'; }); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); }
+            window.exportDailyCSV = function() { const ids = Object.keys(dailySummaries); if(ids.length===0) return; const headers = ['Vehicle','Mileage(km)','Driving Hours','Harsh Events','Max Speed','Date']; const rows = ids.map(id => { const d = dailySummaries[id], name = vehicleMetadata[id]?.name||id; return { 'Vehicle': name, 'Mileage(km)': d.total_mileage_km.toFixed(1), 'Driving Hours': d.driving_hours.toFixed(1), 'Harsh Events': d.harsh_events_total, 'Max Speed': d.max_speed_kmh.toFixed(0), 'Date': d.date||'today' }; }); downloadCSV('daily_summary_today.csv', rows, headers); };
+            window.exportHistoryCSV = function() { const table = document.querySelector('#historyTableContainer table'); if(!table) return; let rows=[], headers=[]; table.querySelectorAll('tr').forEach((tr,idx) => { const cells = tr.querySelectorAll('th,td'); if(idx===0) cells.forEach(th => headers.push(th.textContent.trim())); else { let row={}; cells.forEach((td,i) => row[headers[i]] = td.textContent.trim()); rows.push(row); } }); downloadCSV('daily_summary_history.csv', rows, headers); };
+
+            // ==================== TRIP HISTORY & PLAYBACK ====================
+            window.openTripHistory = function() { document.getElementById('tripHistoryModal').classList.add('show'); populateTripVehicleSelect(); };
+            window.closeTripHistory = function() { document.getElementById('tripHistoryModal').classList.remove('show'); stopPlayback(); };
+            function populateTripVehicleSelect() { const sel = document.getElementById('tripVehicleSelect'); sel.innerHTML = '<option value="">-- Select Vehicle --</option>'; Object.keys(vehicleMetadata).forEach(id => sel.innerHTML += `<option value="${id}">${vehicleMetadata[id].name||id}</option>`); }
+            window.loadTrips = async function() {
+                const deviceId = document.getElementById('tripVehicleSelect').value; const fromDate = document.getElementById('tripFromDate').value;
+                const toDate = document.getElementById('tripToDate').value; if(!deviceId||!fromDate||!toDate) return;
+                const begin = Math.floor(new Date(fromDate+'T00:00:00+02:00').getTime()/1000);
+                const end = Math.floor(new Date(toDate+'T23:59:59+02:00').getTime()/1000);
+                const container = document.getElementById('tripListContainer'); container.innerHTML = '<p>Loading trips...</p>';
+                try { const resp = await fetch(`${API_BASE}/calcs/${CALC_TRIPS_ID}/devices/${deviceId}/intervals/all?data=${encodeURIComponent(JSON.stringify({begin,end,fields:"id,begin,end,duration,distance_km,max_speed_kmh,avg_speed_kmh,route"}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN_TRIPS } }); const data = await resp.json(); loadedTrips = data.result||[]; if(loadedTrips.length===0) { container.innerHTML='<p>No trips found.</p>'; return; } let html = `<table class="trip-table"><thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Dist (km)</th><th>Max Speed</th><th></th></tr></thead><tbody>`; loadedTrips.forEach((trip, idx) => { html += `<tr><td>${new Date(trip.begin*1000).toLocaleString()}</td><td>${new Date(trip.end*1000).toLocaleString()}</td><td>${(trip.duration/3600).toFixed(2)}h</td><td>${(trip.distance_km||0).toFixed(1)}</td><td>${(trip.max_speed_kmh||0).toFixed(0)}</td><td><button class="btn btn-outline" style="padding:4px 10px;" onclick="playTrip(${idx})"><i class="fas fa-play"></i></button></td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; } catch(e) { container.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`; }
+            };
+            window.playTrip = function(idx) { const trip = loadedTrips[idx]; document.getElementById('playbackControls').style.display = 'block'; document.getElementById('tripInfo').innerHTML = `Trip: ${new Date(trip.begin*1000).toLocaleString()} - ${new Date(trip.end*1000).toLocaleString()}`; stopPlayback(); fetchPlaybackPoints(trip.begin, trip.end); };
+            async function fetchPlaybackPoints(from, to) { const deviceId = document.getElementById('tripVehicleSelect').value; try { const resp = await fetch(`${API_BASE}/devices/${deviceId}/messages?data=${encodeURIComponent(JSON.stringify({from,to,fields:"timestamp,position.latitude,position.longitude,position.speed,position.direction",filter:"exists('position.latitude') && $position.valid == true", generalize:300}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN_TRIPS } }); const data = await resp.json(); playbackPoints = (data.result||[]).map(m => ({ lat: m['position.latitude'], lng: m['position.longitude'], speed: m['position.speed']||0, time: m.timestamp })); if(playbackPoints.length>0) { if(playbackPath) map.removeLayer(playbackPath); playbackPath = L.polyline(playbackPoints.map(p=>[p.lat,p.lng]), { color:'#f43f5e', weight:3 }).addTo(map); map.fitBounds(playbackPath.getBounds()); if(playbackMarker) map.removeLayer(playbackMarker); playbackMarker = L.circleMarker([playbackPoints[0].lat,playbackPoints[0].lng], { radius:8, fillColor:'#f43f5e', color:'white', weight:2, fillOpacity:1 }).addTo(map); playbackIndex = 0; updatePlaybackProgress(); } } catch(e) { console.error(e); } }
+            function playPause() { if(playbackInterval) { stopPlayback(); return; } if(!playbackPoints.length) return; document.getElementById('playIcon').className = 'fas fa-pause'; playbackInterval = setInterval(() => { if(playbackIndex >= playbackPoints.length-1) { stopPlayback(); return; } playbackIndex++; const p = playbackPoints[playbackIndex]; playbackMarker.setLatLng([p.lat,p.lng]); updatePlaybackProgress(); }, 1000/playbackSpeed); }
+            function stopPlayback() { if(playbackInterval) clearInterval(playbackInterval); playbackInterval = null; document.getElementById('playIcon').className = 'fas fa-play'; }
+            function updatePlaybackProgress() { const total = playbackPoints.length-1; const pct = total>0? (playbackIndex/total)*100 : 0; document.getElementById('progressFill').style.width = pct+'%'; const t = playbackPoints[playbackIndex]?.time; document.getElementById('timeDisplay').textContent = t? new Date(t*1000).toLocaleTimeString() : '--:--'; }
+            window.changeSpeed = function() { playbackSpeed = parseInt(document.getElementById('playbackSpeed').value,10); };
+            window.exportTripsCSV = function() { if(!loadedTrips.length) return; const headers = ['Start','End','Duration(h)','Distance(km)','Max Speed(km/h)']; const rows = loadedTrips.map(t => ({ 'Start': new Date(t.begin*1000).toLocaleString(), 'End': new Date(t.end*1000).toLocaleString(), 'Duration(h)': (t.duration/3600).toFixed(2), 'Distance(km)': (t.distance_km||0).toFixed(1), 'Max Speed(km/h)': (t.max_speed_kmh||0).toFixed(0) })); downloadCSV('trips.csv', rows, headers); };
+
+            // ==================== ROUTE PLANNER & OPTIMISATION ====================
             window.toggleRoutePlanner = function() { document.getElementById('routeModalOverlay').classList.toggle('show'); };
-            window.switchTab = function(tab) { document.getElementById('tabContentDirections').style.display='none'; document.getElementById('tabContentGeocoding').style.display='none'; document.getElementById('tabContentOptimization').style.display='none'; document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active')); if(tab==='directions'){document.getElementById('tabContentDirections').style.display='block';document.querySelector('.tab-btn:nth-child(1)').classList.add('active');} else if(tab==='geocoding'){document.getElementById('tabContentGeocoding').style.display='block';document.querySelector('.tab-btn:nth-child(2)').classList.add('active');} else {document.getElementById('tabContentOptimization').style.display='block';document.querySelector('.tab-btn:nth-child(3)').classList.add('active');} };
-            window.testToken = async function() { try{ const resp = await fetch('https://api.openrouteservice.org/geocode/search?text=Harare',{headers:{'Authorization':'Bearer '+ORS_TOKEN}}); alert(resp.ok?'Token valid':'Token invalid'); }catch(e){alert('Error');} };
-            window.geocode = async function() { const query=document.getElementById('geocodeInput').value.trim(); if(!query) return; try{ const resp=await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(query)}`,{headers:{'Authorization':'Bearer '+ORS_TOKEN}}); const data=await resp.json(); if(data.features?.length){ const [lon,lat]=data.features[0].geometry.coordinates; map.setView([lat,lon],13); L.marker([lat,lon]).addTo(map).bindPopup(query).openPopup(); } else alert('Not found'); }catch(e){console.error(e);} };
-            async function resolveCoords(str) { if(str.includes(',')){ const parts=str.split(',').map(Number); if(parts.length===2&&!isNaN(parts[0])&&!isNaN(parts[1])) return [parts[0],parts[1]]; } const resp=await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(str)}`,{headers:{'Authorization':'Bearer '+ORS_TOKEN}}); const data=await resp.json(); if(data.features?.length) return data.features[0].geometry.coordinates; return null; }
-            window.getRoute = async function() { const startStr=document.getElementById('startInput').value.trim(), endStr=document.getElementById('endInput').value.trim(); if(!startStr||!endStr) return; try{ const startCoords=await resolveCoords(startStr), endCoords=await resolveCoords(endStr); if(!startCoords||!endCoords){alert('Location not found');return;} const url=`https://api.openrouteservice.org/v2/directions/driving-car?start=${startCoords[0]},${startCoords[1]}&end=${endCoords[0]},${endCoords[1]}`; const resp=await fetch(url,{headers:{'Authorization':'Bearer '+ORS_TOKEN}}); const data=await resp.json(); if(data.type==='FeatureCollection'&&data.features?.length){ routeLayer.clearLayers(); L.geoJSON(data.features[0],{style:{color:'#58a6ff',weight:5}}).addTo(routeLayer); map.fitBounds(routeLayer.getBounds()); L.marker([startCoords[1],startCoords[0]]).addTo(routeLayer).bindPopup('Start'); L.marker([endCoords[1],endCoords[0]]).addTo(routeLayer).bindPopup('End'); } else alert('No route'); }catch(e){console.error(e);alert('Routing failed');} };
+            window.switchTab = function(tab) { document.getElementById('tabContentDirections').style.display='none'; document.getElementById('tabContentGeocoding').style.display='none'; document.getElementById('tabContentOptimization').style.display='none'; document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active')); if(tab==='directions'){ document.getElementById('tabContentDirections').style.display='block'; document.querySelector('.tab-btn:nth-child(1)').classList.add('active'); } else if(tab==='geocoding'){ document.getElementById('tabContentGeocoding').style.display='block'; document.querySelector('.tab-btn:nth-child(2)').classList.add('active'); } else { document.getElementById('tabContentOptimization').style.display='block'; document.querySelector('.tab-btn:nth-child(3)').classList.add('active'); } };
+            window.testToken = async function() { try { const resp = await fetch('https://api.openrouteservice.org/geocode/search?text=Harare', { headers:{'Authorization':'Bearer '+ORS_TOKEN} }); alert(resp.ok?'Token valid':'Token invalid'); } catch(e) { alert('Error'); } };
+            window.geocode = async function() { const query = document.getElementById('geocodeInput').value.trim(); if(!query) return; try { const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(query)}`, { headers:{'Authorization':'Bearer '+ORS_TOKEN} }); const data = await resp.json(); if(data.features?.length) { const [lon,lat] = data.features[0].geometry.coordinates; map.setView([lat,lon],13); L.marker([lat,lon]).addTo(map).bindPopup(query).openPopup(); } else alert('Not found'); } catch(e) { console.error(e); } };
+            async function resolveCoords(str) { if(str.includes(',')) { const parts = str.split(',').map(Number); if(parts.length===2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0],parts[1]]; } const resp = await fetch(`https://api.openrouteservice.org/geocode/search?text=${encodeURIComponent(str)}`, { headers:{'Authorization':'Bearer '+ORS_TOKEN} }); const data = await resp.json(); return data.features?.length? data.features[0].geometry.coordinates : null; }
+            window.getRoute = async function() { const startStr = document.getElementById('startInput').value.trim(); const endStr = document.getElementById('endInput').value.trim(); if(!startStr||!endStr) return; try { const startCoords = await resolveCoords(startStr), endCoords = await resolveCoords(endStr); if(!startCoords||!endCoords) { alert('Location not found'); return; } const url = `https://api.openrouteservice.org/v2/directions/driving-car?start=${startCoords[0]},${startCoords[1]}&end=${endCoords[0]},${endCoords[1]}`; const resp = await fetch(url, { headers:{'Authorization':'Bearer '+ORS_TOKEN} }); const data = await resp.json(); if(data.type==='FeatureCollection'&&data.features?.length) { routeLayer.clearLayers(); L.geoJSON(data.features[0],{style:{color:'#58a6ff',weight:5}}).addTo(routeLayer); map.fitBounds(routeLayer.getBounds()); L.marker([startCoords[1],startCoords[0]]).addTo(routeLayer).bindPopup('Start'); L.marker([endCoords[1],endCoords[0]]).addTo(routeLayer).bindPopup('End'); } else alert('No route'); } catch(e) { console.error(e); alert('Routing failed'); } };
             window.clearRoute = function() { routeLayer.clearLayers(); };
-
             let optimizationJobs = [];
-            window.addJob = function() { const input=document.getElementById('newJobInput').value.trim(); if(!input||!input.includes(',')) return; const parts=input.split(',').map(Number); if(parts.length!==2||isNaN(parts[0])||isNaN(parts[1])) return; optimizationJobs.push({location:[parts[0],parts[1]]}); document.getElementById('newJobInput').value=''; renderJobList(); };
-            function renderJobList() { document.getElementById('jobList').innerHTML=optimizationJobs.map((job,i)=>`<div class="job-item" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span>Job ${i+1}: ${job.location[0].toFixed(5)}, ${job.location[1].toFixed(5)}</span><button class="btn btn-danger" style="padding:2px 10px;" onclick="removeJob(${i})">X</button></div>`).join(''); }
+            window.addJob = function() { const input = document.getElementById('newJobInput').value.trim(); if(!input||!input.includes(',')) return; const parts = input.split(',').map(Number); if(parts.length!==2||isNaN(parts[0])||isNaN(parts[1])) return; optimizationJobs.push({ location:[parts[0],parts[1]] }); document.getElementById('newJobInput').value = ''; renderJobList(); };
+            function renderJobList() { document.getElementById('jobList').innerHTML = optimizationJobs.map((job,i) => `<div class="job-item" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span>Job ${i+1}: ${job.location[0].toFixed(5)}, ${job.location[1].toFixed(5)}</span><button class="btn btn-danger" style="padding:2px 10px;" onclick="removeJob(${i})">X</button></div>`).join(''); }
             window.removeJob = function(i) { optimizationJobs.splice(i,1); renderJobList(); };
-            window.solveOptimization = async function() { const startStr=document.getElementById('vehicleStart').value.trim(); if(!startStr||!startStr.includes(',')){alert('Enter start lon,lat');return;} const parts=startStr.split(',').map(Number); if(parts.length!==2||isNaN(parts[0])||isNaN(parts[1])) return; if(optimizationJobs.length===0){alert('Add jobs');return;} const payload={jobs:optimizationJobs.map(j=>({location:j.location})),vehicles:[{start:[parts[0],parts[1]]}],options:{profile:'driving-car'}}; try{ const resp=await fetch('https://api.openrouteservice.org/optimization',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ORS_TOKEN},body:JSON.stringify(payload)}); const data=await resp.json(); if(data.routes?.length){ routeLayer.clearLayers(); data.routes.forEach((route,idx)=>L.geoJSON(route.geometry,{style:{color:['#58a6ff','#f43f5e','#10b981'][idx%3],weight:5}}).addTo(routeLayer)); L.marker([parts[1],parts[0]]).addTo(routeLayer).bindPopup('Depot'); optimizationJobs.forEach(j=>L.circleMarker([j.location[1],j.location[0]],{radius:6,color:'#fff',fillColor:'#f43f5e',fillOpacity:0.9}).addTo(routeLayer)); map.fitBounds(routeLayer.getBounds()); } else alert('No solution'); }catch(e){console.error(e);alert('Optimization failed');} };
-            window.clearOptimization = function() { optimizationJobs=[]; renderJobList(); routeLayer.clearLayers(); };
+            window.solveOptimization = async function() { const startStr = document.getElementById('vehicleStart').value.trim(); if(!startStr||!startStr.includes(',')){ alert('Enter start lon,lat'); return; } const parts = startStr.split(',').map(Number); if(parts.length!==2||isNaN(parts[0])||isNaN(parts[1])) return; if(optimizationJobs.length===0){ alert('Add jobs'); return; } const payload = { jobs: optimizationJobs.map(j=>({location:j.location})), vehicles:[{start:[parts[0],parts[1]]}], options:{profile:'driving-car'} }; try { const resp = await fetch('https://api.openrouteservice.org/optimization', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+ORS_TOKEN}, body:JSON.stringify(payload) }); const data = await resp.json(); if(data.routes?.length) { routeLayer.clearLayers(); data.routes.forEach((route,idx) => L.geoJSON(route.geometry, { style: { color:['#58a6ff','#f43f5e','#10b981'][idx%3], weight:5 } }).addTo(routeLayer)); L.marker([parts[1],parts[0]]).addTo(routeLayer).bindPopup('Depot'); optimizationJobs.forEach(j => L.circleMarker([j.location[1],j.location[0]], { radius:6, color:'#fff', fillColor:'#f43f5e', fillOpacity:0.9 }).addTo(routeLayer)); map.fitBounds(routeLayer.getBounds()); } else alert('No solution'); } catch(e) { console.error(e); alert('Optimization failed'); } };
+            window.clearOptimization = function() { optimizationJobs = []; renderJobList(); routeLayer.clearLayers(); };
 
+            // ==================== INIT ====================
             window.addEventListener('DOMContentLoaded', () => {
                 initMap(); connectMQTT(); fetchInitialData();
-                setInterval(() => { fetchInitialData(); updateTrayAndStats(); if(selectedVehicleId) updateTelemetryPanel(selectedVehicleId);
-                    // keep daily summary table updated if open
-                    if(document.getElementById('dailySummaryModal').classList.contains('show') && document.getElementById('dailyTodayContent').style.display!=='none') renderTodayTable();
-                }, 30000);
+                setInterval(() => { fetchInitialData(); updateTrayAndStats(); if(selectedVehicleId) updateTelemetryPanel(selectedVehicleId); }, 30000);
                 if (Notification.permission === 'granted') { notificationsEnabled = true; document.getElementById('notifBtn').classList.add('active'); }
             });
         })();
