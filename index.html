@@ -275,7 +275,6 @@
             const CALC_DAILY_ID = '3010162';
             const CALC_TRIPS_ID = '2448154';
 
-            // ==================== STATE ====================
             let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
             let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
             let vehicleMetadata = {}, vehicleTelemetry = {};
@@ -283,10 +282,8 @@
             let routeLayer = null;
             let geofences = [], drawnItems = new L.FeatureGroup(), straightLineLayer = null, drawControl = null, selectedGeofenceId = null;
             let speedLimit = 80, notificationsEnabled = false;
-            // Trip playback
             let playbackInterval = null, playbackPoints = [], playbackIndex = 0, playbackSpeed = 1;
             let playbackMarker = null, playbackPath = null, loadedTrips = [];
-            // OSRM
             let rawPlaybackPoints = [], snappedPlaybackPoints = [], activePlaybackPoints = [];
             let rawTrackLayer = null, snappedTrackLayer = null;
             let rawDistance = 0, snappedDistance = 0, osrmConfidence = 0;
@@ -369,7 +366,6 @@
                 if (selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId);
             };
 
-            // ==================== MQTT ====================
             function connectMQTT() {
                 mqttClient = mqtt.connect(MQTT_BROKER, { username: FLESPI_TOKEN, password: '', clientId: 'sentinel_' + Math.random().toString(16).substr(2,8), clean: true, reconnectPeriod: 5000 });
                 mqttClient.on('connect', () => { console.log('MQTT connected');
@@ -453,7 +449,37 @@
             function isPointInsideGeofence(lat,lng,gf) { if(gf.type==='circle') return map.distance([lat,lng],[gf.center.lat,gf.center.lng]) <= gf.radius; if(gf.type==='polygon'||gf.type==='rectangle') { const point = turf.point([lng,lat]); const polygon = turf.polygon([gf.coordinates[0].map(c=>[c.lng,c.lat])]); return turf.booleanPointInPolygon(point, polygon); } return false; }
             function checkGeofenceEntries(vehicleId,lat,lng) { geofences.forEach(gf => { const inside = isPointInsideGeofence(lat,lng,gf); const state = gf.inGeofenceState[vehicleId] || false; if(inside && !state) { gf.vehicleVisits[vehicleId] = (gf.vehicleVisits[vehicleId]||0)+1; gf.inGeofenceState[vehicleId] = true; saveGeofences(); renderGeofenceList(); if(notificationsEnabled) sendNotification('Geofence Entry', `${vehicleMetadata[vehicleId]?.name||vehicleId} entered ${gf.name}`); } else if(!inside && state) { gf.inGeofenceState[vehicleId] = false; saveGeofences(); } }); }
             function renderGeofencesOnMap() { drawnItems.clearLayers(); geofences.forEach(gf => { let layer; if(gf.type==='circle') layer = L.circle([gf.center.lat,gf.center.lng], { radius: gf.radius, color:'#58a6ff', fillOpacity:0.1 }); else layer = L.polygon(gf.coordinates[0].map(c=>[c.lat,c.lng]), { color:'#58a6ff', fillOpacity:0.1 }); layer.bindPopup(`<b>${gf.name}</b>`); layer.on('click', ()=> selectGeofence(gf.id)); drawnItems.addLayer(layer); }); }
-            function renderGeofenceList() { const container = document.getElementById('geofenceList'); if(!geofences.length) { container.innerHTML = '<p class="text-secondary small">No geofences.</p>'; return; } let html=''; geofences.forEach(gf => { let visitsHtml=''; Object.keys(gf.vehicleVisits).forEach(vid => { visitsHtml += `<div>${vehicleMetadata[vid]?.name||vid}: ${gf.vehicleVisits[vid]} visits</div>`; }); if(!visitsHtml) visitsHtml = '<div>No visits yet</div>'; html += `<div class="geofence-list-item ${selectedGeofenceId===gf.id?'selected':''}" onclick="selectGeofence('${gf.id}')"><div class="geofence-name">${gf.name} (${gf.type})</div><div class="geofence-visits">${visitsHtml}</div></div>`; }); container.innerHTML = html; }
+            function renderGeofenceList() {
+                const container = document.getElementById('geofenceList');
+                if(!geofences.length) { container.innerHTML = '<p class="text-secondary small">No geofences.</p>'; return; }
+                let html='';
+                geofences.forEach(gf => {
+                    let visitsHtml='';
+                    Object.keys(gf.vehicleVisits).forEach(vid => { visitsHtml += `<div>${vehicleMetadata[vid]?.name||vid}: ${gf.vehicleVisits[vid]} visits</div>`; });
+                    if(!visitsHtml) visitsHtml = '<div>No visits yet</div>';
+                    html += `
+                        <div class="geofence-list-item ${selectedGeofenceId===gf.id?'selected':''}" onclick="selectGeofence('${gf.id}')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div class="geofence-name">${gf.name} (${gf.type})</div>
+                                    <div class="geofence-visits">${visitsHtml}</div>
+                                </div>
+                                <button class="btn btn-danger" style="padding:2px 8px; margin-left:10px;" onclick="event.stopPropagation(); deleteGeofence('${gf.id}')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                container.innerHTML = html;
+            }
+            window.deleteGeofence = function(id) {
+                geofences = geofences.filter(g => g.id !== id);
+                if (selectedGeofenceId === id) selectedGeofenceId = null;
+                saveGeofences();
+                renderGeofencesOnMap();
+                renderGeofenceList();
+                if (straightLineLayer) { map.removeLayer(straightLineLayer); straightLineLayer = null; }
+            };
             window.startDrawGeofence = function() { if(!map.hasLayer(drawnItems)) map.addLayer(drawnItems); new L.Draw.Circle(map,{}).enable(); new L.Draw.Polygon(map,{}).enable(); new L.Draw.Rectangle(map,{}).enable(); map.once('draw:created', function(e) { const layer = e.layer, type = e.layerType; const name = prompt('Geofence name:', 'Zone '+(geofences.length+1))||'Zone '+(geofences.length+1); let gf = { id: Date.now().toString(), name, type, vehicleVisits:{}, inGeofenceState:{} }; if(type==='circle') { gf.center = layer.getLatLng(); gf.radius = layer.getRadius(); } else gf.coordinates = layer.getLatLngs(); geofences.push(gf); saveGeofences(); renderGeofencesOnMap(); renderGeofenceList(); }); };
 
             // ==================== DAILY SUMMARY ====================
@@ -506,6 +532,13 @@
                 const end = Math.floor(new Date(toDate+'T23:59:59+02:00').getTime()/1000);
                 const container = document.getElementById('tripListContainer'); container.innerHTML = '<p>Loading trips...</p>';
                 try { const resp = await fetch(`${API_BASE}/calcs/${CALC_TRIPS_ID}/devices/${deviceId}/intervals/all?data=${encodeURIComponent(JSON.stringify({begin,end,fields:"id,begin,end,duration,distance_km,max_speed_kmh,avg_speed_kmh,route"}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN_TRIPS } }); const data = await resp.json(); loadedTrips = data.result||[]; if(loadedTrips.length===0) { container.innerHTML='<p>No trips found.</p>'; return; } let html = `<table class="trip-table"><thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Dist (km)</th><th>Max Speed</th><th></th></tr></thead><tbody>`; loadedTrips.forEach((trip, idx) => { html += `<tr><td>${new Date(trip.begin*1000).toLocaleString()}</td><td>${new Date(trip.end*1000).toLocaleString()}</td><td>${(trip.duration/3600).toFixed(2)}h</td><td>${(trip.distance_km||0).toFixed(1)}</td><td>${(trip.max_speed_kmh||0).toFixed(0)}</td><td><button class="btn btn-outline" style="padding:4px 10px;" onclick="playTrip(${idx})"><i class="fas fa-play"></i></button></td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; } catch(e) { container.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`; }
+            };
+            window.playTrip = function(idx) {
+                const trip = loadedTrips[idx];
+                document.getElementById('playbackControls').style.display = 'block';
+                document.getElementById('tripInfo').innerHTML = `Trip: ${new Date(trip.begin*1000).toLocaleString()} - ${new Date(trip.end*1000).toLocaleString()}`;
+                stopPlayback();
+                fetchPlaybackPoints(trip.begin, trip.end);
             };
 
             // ==================== OSRM / PLAYBACK ====================
@@ -571,7 +604,7 @@
 
             async function fetchPlaybackPoints(from, to) {
                 const deviceId = document.getElementById('tripVehicleSelect').value;
-                if (!deviceId) return;
+                if (!deviceId) { alert('Please select a vehicle'); return; }
                 try {
                     const resp = await fetch(`${API_BASE}/devices/${deviceId}/messages?data=${encodeURIComponent(JSON.stringify({
                         from, to,
@@ -587,7 +620,10 @@
                         speed: m['position.speed'] || 0,
                         time: m.timestamp
                     }));
-                    if (!rawPlaybackPoints.length) return;
+                    if (!rawPlaybackPoints.length) {
+                        alert('No telemetry points found for this range');
+                        return;
+                    }
                     rawDistance = calculateRawDistance(rawPlaybackPoints);
                     document.getElementById('osrmBadge').style.display = 'none';
                     document.getElementById('rawBadge').style.display = 'none';
@@ -611,6 +647,7 @@
                     setupPlaybackPath();
                 } catch (e) {
                     console.error(e);
+                    alert('Failed to fetch telemetry: ' + e.message);
                 }
             }
 
@@ -648,16 +685,8 @@
                 setupPlaybackPath();
             }
 
-            function toggleTrackCompare() { isCompareMode = !isCompareMode; updatePlaybackLayers(); }
-            function toggleSnappedMode() { isSnappedMode = document.getElementById('snappedToggle').checked; isCompareMode = false; updatePlaybackLayers(); }
-
-            window.playTrip = function(idx) {
-                const trip = loadedTrips[idx];
-                document.getElementById('playbackControls').style.display = 'block';
-                document.getElementById('tripInfo').innerHTML = `Trip: ${new Date(trip.begin*1000).toLocaleString()} - ${new Date(trip.end*1000).toLocaleString()}`;
-                stopPlayback();
-                fetchPlaybackPoints(trip.begin, trip.end);
-            };
+            window.toggleTrackCompare = function() { isCompareMode = !isCompareMode; updatePlaybackLayers(); };
+            window.toggleSnappedMode = function() { isSnappedMode = document.getElementById('snappedToggle').checked; isCompareMode = false; updatePlaybackLayers(); };
 
             window.quickReplay = function(minutes) {
                 const now = Date.now();
@@ -687,9 +716,9 @@
                 statusEl.innerHTML = 'Ready. Use playback controls below.';
             }
 
-            function playPause() {
+            window.playPause = function() {
                 if (playbackInterval) { stopPlayback(); return; }
-                if (!activePlaybackPoints.length) return;
+                if (!activePlaybackPoints.length) { alert('No playback points loaded'); return; }
                 document.getElementById('playIcon').className = 'fas fa-pause';
                 playbackInterval = setInterval(() => {
                     if (playbackIndex >= activePlaybackPoints.length - 1) { stopPlayback(); return; }
@@ -698,9 +727,9 @@
                     playbackMarker.setLatLng([p.lat, p.lng]);
                     updatePlaybackProgress();
                 }, 1000 / playbackSpeed);
-            }
+            };
 
-            function stopPlayback() { if (playbackInterval) clearInterval(playbackInterval); playbackInterval = null; document.getElementById('playIcon').className = 'fas fa-play'; }
+            window.stopPlayback = function() { if (playbackInterval) clearInterval(playbackInterval); playbackInterval = null; document.getElementById('playIcon').className = 'fas fa-play'; };
 
             function updatePlaybackProgress() {
                 const total = activePlaybackPoints.length - 1;
@@ -710,7 +739,7 @@
                 document.getElementById('timeDisplay').textContent = t ? new Date(t * 1000).toLocaleTimeString() : '--:--';
             }
 
-            function seekPlayback(e) {
+            window.seekPlayback = function(e) {
                 const bar = document.getElementById('progressBar');
                 const rect = bar.getBoundingClientRect();
                 const pct = (e.clientX - rect.left) / rect.width;
@@ -720,7 +749,7 @@
                     playbackMarker.setLatLng([p.lat, p.lng]);
                     updatePlaybackProgress();
                 }
-            }
+            };
 
             window.changeSpeed = function() {
                 playbackSpeed = parseInt(document.getElementById('playbackSpeed').value, 10);
