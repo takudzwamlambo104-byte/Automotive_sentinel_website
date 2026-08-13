@@ -77,6 +77,15 @@
         .daily-table, .trip-table { width:100%; border-collapse:collapse; margin-top:20px; }
         .daily-table th,.trip-table th,.daily-table td,.trip-table td { padding:12px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
         .daily-table th,.trip-table th { color:var(--text-secondary); font-weight:600; font-size:0.8rem; text-transform:uppercase; }
+        .quick-preset { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+        .quick-preset button { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#e6edf3; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:0.8rem; }
+        .quick-preset button:hover { background:rgba(31,111,235,0.2); border-color:#58a6ff; }
+        .toggle-switch { display:inline-flex; align-items:center; cursor:pointer; }
+        .toggle-switch input { display:none; }
+        .toggle-slider { width:40px; height:20px; background:#333; border-radius:10px; position:relative; transition:background 0.2s; }
+        .toggle-slider::after { content:''; width:16px; height:16px; background:white; border-radius:50%; position:absolute; top:2px; left:2px; transition:transform 0.2s; }
+        .toggle-switch input:checked + .toggle-slider { background:#58a6ff; }
+        .toggle-switch input:checked + .toggle-slider::after { transform:translateX(20px); }
     </style>
 </head>
 <body>
@@ -153,25 +162,67 @@
 
     <div class="modal-overlay" id="tripHistoryModal">
         <div class="modal-box">
-            <div class="modal-header"><h4><i class="fas fa-history"></i> Trip History Playback</h4><button class="panel-close-btn" onclick="closeTripHistory()">&times;</button></div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+            <div class="modal-header"><h4><i class="fas fa-history"></i> Trip History & Replay</h4><button class="panel-close-btn" onclick="closeTripHistory()">&times;</button></div>
+            <div style="margin-bottom:20px;">
                 <select id="tripVehicleSelect" class="glass-input"><option value="">-- Select Vehicle --</option></select>
-                <div style="display:flex; gap:10px;">
+            </div>
+            <div class="tab-group">
+                <div class="tab-btn active" onclick="switchTripTab('trips')">Trip Intervals</div>
+                <div class="tab-btn" onclick="switchTripTab('quick')">Quick Replay</div>
+            </div>
+
+            <div id="tripsTabContent">
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
                     <input type="date" id="tripFromDate" class="glass-input">
                     <input type="date" id="tripToDate" class="glass-input">
                 </div>
+                <button class="btn" onclick="loadTrips()"><i class="fas fa-search"></i> Load Trips</button>
+                <button class="btn btn-outline" style="margin-left:10px;" onclick="exportTripsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                <div id="tripListContainer" style="margin-top:20px;"></div>
             </div>
-            <button class="btn" onclick="loadTrips()"><i class="fas fa-search"></i> Load Trips</button>
-            <button class="btn btn-outline" style="margin-left:10px;" onclick="exportTripsCSV()"><i class="fas fa-download"></i> Export CSV</button>
-            <div id="tripListContainer" style="margin-top:20px;"></div>
+
+            <div id="quickTabContent" style="display:none;">
+                <div class="quick-preset">
+                    <button onclick="quickReplay(15)">⚡ Last 15 Mins</button>
+                    <button onclick="quickReplay(60)">⚡ Last 1 Hour</button>
+                    <button onclick="quickReplay(360)">⚡ Last 6 Hours</button>
+                    <button onclick="quickReplay(1440)">⚡ Last 24 Hours</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:12px;">
+                    <input type="datetime-local" id="customStartInput" class="glass-input" placeholder="Start">
+                    <input type="datetime-local" id="customEndInput" class="glass-input" placeholder="End">
+                </div>
+                <button class="btn" onclick="customQuickReplay()"><i class="fas fa-clock"></i> Load Custom Range</button>
+                <div id="quickReplayStatus" style="margin-top:12px; font-size:0.85rem; color:var(--text-secondary);"></div>
+            </div>
+
             <div id="playbackControls" style="display:none; margin-top:20px;">
                 <div class="playback-bar">
                     <button onclick="playPause()"><i id="playIcon" class="fas fa-play"></i></button>
-                    <div class="progress-container" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="progress-container" id="progressBar" style="cursor:pointer;" onclick="seekPlayback(event)">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
                     <span id="timeDisplay" style="font-size:0.9rem;">00:00 / 00:00</span>
-                    <select id="playbackSpeed" onchange="changeSpeed()" class="glass-input" style="width:80px;"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select>
+                    <select id="playbackSpeed" onchange="changeSpeed()" class="glass-input" style="width:80px;">
+                        <option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option>
+                    </select>
                 </div>
-                <div id="tripInfo" style="margin-top:10px; font-size:0.9rem; color:var(--text-secondary);"></div>
+                <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; margin-top:15px;">
+                    <span class="osrm-status-badge snapped" id="osrmBadge" style="display:none;">
+                        <i class="fas fa-route"></i> OSRM Snapped · <span id="osrmConfidence">--</span>% confidence
+                    </span>
+                    <span class="osrm-status-badge raw" id="rawBadge" style="display:none;">
+                        <i class="fas fa-broadcast-tower"></i> Raw Telemetry
+                    </span>
+                    <button class="btn btn-outline" onclick="toggleTrackCompare()"><i class="fas fa-exchange-alt"></i> Compare</button>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="snappedToggle" checked onchange="toggleSnappedMode()">
+                        <label for="snappedToggle" class="toggle-slider"></label>
+                    </div>
+                    <span style="font-size:0.8rem;">Road Snapping</span>
+                </div>
+                <div id="tripInfo" style="margin-top:10px; font-size:0.85rem; color:var(--text-secondary);"></div>
+                <div id="distanceStats" style="margin-top:5px; font-size:0.8rem; color:var(--text-secondary);"></div>
             </div>
         </div>
     </div>
@@ -224,6 +275,7 @@
             const CALC_DAILY_ID = '3010162';
             const CALC_TRIPS_ID = '2448154';
 
+            // ==================== STATE ====================
             let map, mqttClient, satelliteLayer, labelLayer, hybridGroup, isSatellite = false;
             let vehicleMarkers = {}, vehiclePositions = {}, dailySummaries = {};
             let vehicleMetadata = {}, vehicleTelemetry = {};
@@ -231,8 +283,14 @@
             let routeLayer = null;
             let geofences = [], drawnItems = new L.FeatureGroup(), straightLineLayer = null, drawControl = null, selectedGeofenceId = null;
             let speedLimit = 80, notificationsEnabled = false;
+            // Trip playback
             let playbackInterval = null, playbackPoints = [], playbackIndex = 0, playbackSpeed = 1;
             let playbackMarker = null, playbackPath = null, loadedTrips = [];
+            // OSRM
+            let rawPlaybackPoints = [], snappedPlaybackPoints = [], activePlaybackPoints = [];
+            let rawTrackLayer = null, snappedTrackLayer = null;
+            let rawDistance = 0, snappedDistance = 0, osrmConfidence = 0;
+            let isSnappedMode = true, isCompareMode = false;
 
             // ==================== PWA & NOTIFICATIONS ====================
             if ('serviceWorker' in navigator) window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));
@@ -311,6 +369,7 @@
                 if (selectedGeofenceId) drawStraightLineToGeofence(selectedGeofenceId);
             };
 
+            // ==================== MQTT ====================
             function connectMQTT() {
                 mqttClient = mqtt.connect(MQTT_BROKER, { username: FLESPI_TOKEN, password: '', clientId: 'sentinel_' + Math.random().toString(16).substr(2,8), clean: true, reconnectPeriod: 5000 });
                 mqttClient.on('connect', () => { console.log('MQTT connected');
@@ -428,6 +487,18 @@
             window.openTripHistory = function() { document.getElementById('tripHistoryModal').classList.add('show'); populateTripVehicleSelect(); };
             window.closeTripHistory = function() { document.getElementById('tripHistoryModal').classList.remove('show'); stopPlayback(); };
             function populateTripVehicleSelect() { const sel = document.getElementById('tripVehicleSelect'); sel.innerHTML = '<option value="">-- Select Vehicle --</option>'; Object.keys(vehicleMetadata).forEach(id => sel.innerHTML += `<option value="${id}">${vehicleMetadata[id].name||id}</option>`); }
+            window.switchTripTab = function(tab) {
+                document.getElementById('tripsTabContent').style.display = 'none';
+                document.getElementById('quickTabContent').style.display = 'none';
+                document.querySelectorAll('#tripHistoryModal .tab-btn').forEach(btn => btn.classList.remove('active'));
+                if (tab === 'trips') {
+                    document.getElementById('tripsTabContent').style.display = 'block';
+                    document.querySelector('#tripHistoryModal .tab-btn:nth-child(1)').classList.add('active');
+                } else {
+                    document.getElementById('quickTabContent').style.display = 'block';
+                    document.querySelector('#tripHistoryModal .tab-btn:nth-child(2)').classList.add('active');
+                }
+            };
             window.loadTrips = async function() {
                 const deviceId = document.getElementById('tripVehicleSelect').value; const fromDate = document.getElementById('tripFromDate').value;
                 const toDate = document.getElementById('tripToDate').value; if(!deviceId||!fromDate||!toDate) return;
@@ -436,13 +507,232 @@
                 const container = document.getElementById('tripListContainer'); container.innerHTML = '<p>Loading trips...</p>';
                 try { const resp = await fetch(`${API_BASE}/calcs/${CALC_TRIPS_ID}/devices/${deviceId}/intervals/all?data=${encodeURIComponent(JSON.stringify({begin,end,fields:"id,begin,end,duration,distance_km,max_speed_kmh,avg_speed_kmh,route"}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN_TRIPS } }); const data = await resp.json(); loadedTrips = data.result||[]; if(loadedTrips.length===0) { container.innerHTML='<p>No trips found.</p>'; return; } let html = `<table class="trip-table"><thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Dist (km)</th><th>Max Speed</th><th></th></tr></thead><tbody>`; loadedTrips.forEach((trip, idx) => { html += `<tr><td>${new Date(trip.begin*1000).toLocaleString()}</td><td>${new Date(trip.end*1000).toLocaleString()}</td><td>${(trip.duration/3600).toFixed(2)}h</td><td>${(trip.distance_km||0).toFixed(1)}</td><td>${(trip.max_speed_kmh||0).toFixed(0)}</td><td><button class="btn btn-outline" style="padding:4px 10px;" onclick="playTrip(${idx})"><i class="fas fa-play"></i></button></td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; } catch(e) { container.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`; }
             };
-            window.playTrip = function(idx) { const trip = loadedTrips[idx]; document.getElementById('playbackControls').style.display = 'block'; document.getElementById('tripInfo').innerHTML = `Trip: ${new Date(trip.begin*1000).toLocaleString()} - ${new Date(trip.end*1000).toLocaleString()}`; stopPlayback(); fetchPlaybackPoints(trip.begin, trip.end); };
-            async function fetchPlaybackPoints(from, to) { const deviceId = document.getElementById('tripVehicleSelect').value; try { const resp = await fetch(`${API_BASE}/devices/${deviceId}/messages?data=${encodeURIComponent(JSON.stringify({from,to,fields:"timestamp,position.latitude,position.longitude,position.speed,position.direction",filter:"exists('position.latitude') && $position.valid == true", generalize:300}))}`, { headers: { 'Authorization': 'FlespiToken '+FLESPI_TOKEN_TRIPS } }); const data = await resp.json(); playbackPoints = (data.result||[]).map(m => ({ lat: m['position.latitude'], lng: m['position.longitude'], speed: m['position.speed']||0, time: m.timestamp })); if(playbackPoints.length>0) { if(playbackPath) map.removeLayer(playbackPath); playbackPath = L.polyline(playbackPoints.map(p=>[p.lat,p.lng]), { color:'#f43f5e', weight:3 }).addTo(map); map.fitBounds(playbackPath.getBounds()); if(playbackMarker) map.removeLayer(playbackMarker); playbackMarker = L.circleMarker([playbackPoints[0].lat,playbackPoints[0].lng], { radius:8, fillColor:'#f43f5e', color:'white', weight:2, fillOpacity:1 }).addTo(map); playbackIndex = 0; updatePlaybackProgress(); } } catch(e) { console.error(e); } }
-            function playPause() { if(playbackInterval) { stopPlayback(); return; } if(!playbackPoints.length) return; document.getElementById('playIcon').className = 'fas fa-pause'; playbackInterval = setInterval(() => { if(playbackIndex >= playbackPoints.length-1) { stopPlayback(); return; } playbackIndex++; const p = playbackPoints[playbackIndex]; playbackMarker.setLatLng([p.lat,p.lng]); updatePlaybackProgress(); }, 1000/playbackSpeed); }
-            function stopPlayback() { if(playbackInterval) clearInterval(playbackInterval); playbackInterval = null; document.getElementById('playIcon').className = 'fas fa-play'; }
-            function updatePlaybackProgress() { const total = playbackPoints.length-1; const pct = total>0? (playbackIndex/total)*100 : 0; document.getElementById('progressFill').style.width = pct+'%'; const t = playbackPoints[playbackIndex]?.time; document.getElementById('timeDisplay').textContent = t? new Date(t*1000).toLocaleTimeString() : '--:--'; }
-            window.changeSpeed = function() { playbackSpeed = parseInt(document.getElementById('playbackSpeed').value,10); };
-            window.exportTripsCSV = function() { if(!loadedTrips.length) return; const headers = ['Start','End','Duration(h)','Distance(km)','Max Speed(km/h)']; const rows = loadedTrips.map(t => ({ 'Start': new Date(t.begin*1000).toLocaleString(), 'End': new Date(t.end*1000).toLocaleString(), 'Duration(h)': (t.duration/3600).toFixed(2), 'Distance(km)': (t.distance_km||0).toFixed(1), 'Max Speed(km/h)': (t.max_speed_kmh||0).toFixed(0) })); downloadCSV('trips.csv', rows, headers); };
+
+            // ==================== OSRM / PLAYBACK ====================
+            async function osrmMatch(points) {
+                if (!points.length) return null;
+                const chunkSize = 90;
+                const chunks = [];
+                for (let i = 0; i < points.length; i += chunkSize) {
+                    let chunk = points.slice(i, i + chunkSize);
+                    if (i > 0 && chunks.length) {
+                        const prevLast = points[i - 1];
+                        chunk = [prevLast, ...chunk];
+                    }
+                    chunks.push(chunk);
+                }
+                let combinedCoords = [];
+                let totalDistance = 0;
+                let confidenceSum = 0;
+                let confidenceCount = 0;
+                for (let ci = 0; ci < chunks.length; ci++) {
+                    const chunk = chunks[ci];
+                    const coordStr = chunk.map(p => `${p.lng},${p.lat}`).join(';');
+                    const url = `https://router.project-osrm.org/match/v1/driving/${coordStr}?overview=full&geometries=geojson&gaps=ignore&annotations=true`;
+                    try {
+                        const resp = await fetch(url);
+                        const data = await resp.json();
+                        if (data.code !== 'Ok' || !data.matchings || !data.matchings.length) return null;
+                        const matching = data.matchings[0];
+                        const coords = matching.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
+                        if (combinedCoords.length && coords.length) {
+                            const last = combinedCoords[combinedCoords.length - 1];
+                            const first = coords[0];
+                            if (haversineDistance(last.lat, last.lng, first.lat, first.lng) < 1) coords.shift();
+                        }
+                        combinedCoords = combinedCoords.concat(coords);
+                        totalDistance += matching.distance;
+                        if (matching.confidence !== undefined) { confidenceSum += matching.confidence; confidenceCount++; }
+                    } catch (e) { return null; }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                if (!combinedCoords.length) return null;
+                snappedDistance = totalDistance / 1000;
+                osrmConfidence = confidenceCount ? (confidenceSum / confidenceCount) * 100 : 0;
+                return combinedCoords;
+            }
+
+            function haversineDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3;
+                const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+                const deltaPhi = (lat2 - lat1) * Math.PI / 180, deltaLambda = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(deltaPhi/2)*Math.sin(deltaPhi/2) + Math.cos(phi1)*Math.cos(phi2)*Math.sin(deltaLambda/2)*Math.sin(deltaLambda/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            function calculateRawDistance(points) {
+                let total = 0;
+                for (let i = 1; i < points.length; i++) {
+                    total += haversineDistance(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
+                }
+                return total / 1000;
+            }
+
+            async function fetchPlaybackPoints(from, to) {
+                const deviceId = document.getElementById('tripVehicleSelect').value;
+                if (!deviceId) return;
+                try {
+                    const resp = await fetch(`${API_BASE}/devices/${deviceId}/messages?data=${encodeURIComponent(JSON.stringify({
+                        from, to,
+                        fields: "timestamp,position.latitude,position.longitude,position.speed,position.direction",
+                        filter: "exists('position.latitude') && $position.valid == true"
+                    }))}`, {
+                        headers: { 'Authorization': 'FlespiToken ' + FLESPI_TOKEN_TRIPS }
+                    });
+                    const data = await resp.json();
+                    rawPlaybackPoints = (data.result || []).map(m => ({
+                        lat: m['position.latitude'],
+                        lng: m['position.longitude'],
+                        speed: m['position.speed'] || 0,
+                        time: m.timestamp
+                    }));
+                    if (!rawPlaybackPoints.length) return;
+                    rawDistance = calculateRawDistance(rawPlaybackPoints);
+                    document.getElementById('osrmBadge').style.display = 'none';
+                    document.getElementById('rawBadge').style.display = 'none';
+                    document.getElementById('distanceStats').innerHTML = `Raw distance: ${rawDistance.toFixed(2)} km | Snapping...`;
+                    osrmMatch(rawPlaybackPoints).then(snapped => {
+                        if (snapped && snapped.length) {
+                            snappedPlaybackPoints = snapped;
+                            isSnappedMode = true;
+                            document.getElementById('osrmBadge').style.display = 'inline-block';
+                            document.getElementById('osrmConfidence').textContent = osrmConfidence.toFixed(0);
+                            document.getElementById('distanceStats').innerHTML = `Raw: ${rawDistance.toFixed(2)} km | Snapped: ${snappedDistance.toFixed(2)} km | Confidence: ${osrmConfidence.toFixed(1)}%`;
+                        } else {
+                            snappedPlaybackPoints = [];
+                            isSnappedMode = false;
+                            document.getElementById('rawBadge').style.display = 'inline-block';
+                            document.getElementById('distanceStats').innerHTML = `Raw distance: ${rawDistance.toFixed(2)} km (OSRM unavailable)`;
+                        }
+                        updatePlaybackLayers();
+                    });
+                    activePlaybackPoints = rawPlaybackPoints;
+                    setupPlaybackPath();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function setupPlaybackPath() {
+                if (playbackMarker) map.removeLayer(playbackMarker);
+                if (rawTrackLayer) map.removeLayer(rawTrackLayer);
+                if (snappedTrackLayer) map.removeLayer(snappedTrackLayer);
+                rawTrackLayer = null; snappedTrackLayer = null;
+                if (activePlaybackPoints.length) {
+                    const first = activePlaybackPoints[0];
+                    playbackMarker = L.circleMarker([first.lat, first.lng], { radius: 8, fillColor: '#f43f5e', color: 'white', weight: 2, fillOpacity: 1 }).addTo(map);
+                    playbackIndex = 0;
+                    updatePlaybackProgress();
+                }
+            }
+
+            function updatePlaybackLayers() {
+                if (rawTrackLayer) map.removeLayer(rawTrackLayer);
+                if (snappedTrackLayer) map.removeLayer(snappedTrackLayer);
+                rawTrackLayer = null; snappedTrackLayer = null;
+
+                if (isCompareMode) {
+                    if (rawPlaybackPoints.length) rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2, dashArray: '4 4' }).addTo(map);
+                    if (snappedPlaybackPoints.length) snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 4 }).addTo(map);
+                } else {
+                    if (isSnappedMode && snappedPlaybackPoints.length) {
+                        snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 4 }).addTo(map);
+                        activePlaybackPoints = snappedPlaybackPoints;
+                    } else if (rawPlaybackPoints.length) {
+                        rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2 }).addTo(map);
+                        activePlaybackPoints = rawPlaybackPoints;
+                    }
+                }
+                if (activePlaybackPoints.length) map.fitBounds(L.latLngBounds(activePlaybackPoints.map(p => [p.lat, p.lng])));
+                setupPlaybackPath();
+            }
+
+            function toggleTrackCompare() { isCompareMode = !isCompareMode; updatePlaybackLayers(); }
+            function toggleSnappedMode() { isSnappedMode = document.getElementById('snappedToggle').checked; isCompareMode = false; updatePlaybackLayers(); }
+
+            window.playTrip = function(idx) {
+                const trip = loadedTrips[idx];
+                document.getElementById('playbackControls').style.display = 'block';
+                document.getElementById('tripInfo').innerHTML = `Trip: ${new Date(trip.begin*1000).toLocaleString()} - ${new Date(trip.end*1000).toLocaleString()}`;
+                stopPlayback();
+                fetchPlaybackPoints(trip.begin, trip.end);
+            };
+
+            window.quickReplay = function(minutes) {
+                const now = Date.now();
+                loadQuickReplayRange(now - minutes*60*1000, now);
+            };
+
+            window.customQuickReplay = function() {
+                const startVal = document.getElementById('customStartInput').value;
+                const endVal = document.getElementById('customEndInput').value;
+                if (!startVal || !endVal) return;
+                const start = new Date(startVal).getTime();
+                const end = new Date(endVal).getTime();
+                if (end <= start) { alert('End must be after start'); return; }
+                loadQuickReplayRange(start, end);
+            };
+
+            async function loadQuickReplayRange(fromMs, toMs) {
+                const deviceId = document.getElementById('tripVehicleSelect').value;
+                if (!deviceId) { alert('Select a vehicle first'); return; }
+                const from = Math.floor(fromMs / 1000);
+                const to = Math.floor(toMs / 1000);
+                const statusEl = document.getElementById('quickReplayStatus');
+                statusEl.innerHTML = 'Loading raw telemetry...';
+                document.getElementById('playbackControls').style.display = 'block';
+                document.getElementById('tripInfo').innerHTML = `Quick replay: ${new Date(fromMs).toLocaleString()} - ${new Date(toMs).toLocaleString()}`;
+                await fetchPlaybackPoints(from, to);
+                statusEl.innerHTML = 'Ready. Use playback controls below.';
+            }
+
+            function playPause() {
+                if (playbackInterval) { stopPlayback(); return; }
+                if (!activePlaybackPoints.length) return;
+                document.getElementById('playIcon').className = 'fas fa-pause';
+                playbackInterval = setInterval(() => {
+                    if (playbackIndex >= activePlaybackPoints.length - 1) { stopPlayback(); return; }
+                    playbackIndex++;
+                    const p = activePlaybackPoints[playbackIndex];
+                    playbackMarker.setLatLng([p.lat, p.lng]);
+                    updatePlaybackProgress();
+                }, 1000 / playbackSpeed);
+            }
+
+            function stopPlayback() { if (playbackInterval) clearInterval(playbackInterval); playbackInterval = null; document.getElementById('playIcon').className = 'fas fa-play'; }
+
+            function updatePlaybackProgress() {
+                const total = activePlaybackPoints.length - 1;
+                const pct = total > 0 ? (playbackIndex / total) * 100 : 0;
+                document.getElementById('progressFill').style.width = pct + '%';
+                const t = activePlaybackPoints[playbackIndex]?.time;
+                document.getElementById('timeDisplay').textContent = t ? new Date(t * 1000).toLocaleTimeString() : '--:--';
+            }
+
+            function seekPlayback(e) {
+                const bar = document.getElementById('progressBar');
+                const rect = bar.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                if (activePlaybackPoints.length) {
+                    playbackIndex = Math.floor(pct * (activePlaybackPoints.length - 1));
+                    const p = activePlaybackPoints[playbackIndex];
+                    playbackMarker.setLatLng([p.lat, p.lng]);
+                    updatePlaybackProgress();
+                }
+            }
+
+            window.changeSpeed = function() {
+                playbackSpeed = parseInt(document.getElementById('playbackSpeed').value, 10);
+                if (playbackInterval) { stopPlayback(); playPause(); }
+            };
+
+            window.exportTripsCSV = function() {
+                if (!loadedTrips.length) return;
+                const headers = ['Start','End','Duration(h)','Distance(km)','Max Speed(km/h)'];
+                const rows = loadedTrips.map(t => ({ 'Start': new Date(t.begin*1000).toLocaleString(), 'End': new Date(t.end*1000).toLocaleString(), 'Duration(h)': (t.duration/3600).toFixed(2), 'Distance(km)': (t.distance_km||0).toFixed(1), 'Max Speed(km/h)': (t.max_speed_kmh||0).toFixed(0) }));
+                downloadCSV('trips.csv', rows, headers);
+            };
 
             // ==================== ROUTE PLANNER & OPTIMISATION ====================
             window.toggleRoutePlanner = function() { document.getElementById('routeModalOverlay').classList.toggle('show'); };
