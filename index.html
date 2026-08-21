@@ -660,6 +660,16 @@
                 }
             }
 
+            function createPlaybackIcon() {
+                return L.divIcon({
+                    className: '',
+                    html: `<div style="font-size:24px; color:#58a6ff; text-shadow:0 0 5px rgba(88,166,255,0.8);"><i class="fas fa-location-arrow"></i></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12],
+                    popupAnchor: [0, -12]
+                });
+            }
+
             function setupPlaybackPath() {
                 if (playbackMarker) map.removeLayer(playbackMarker);
                 if (rawTrackLayer) map.removeLayer(rawTrackLayer);
@@ -667,7 +677,7 @@
                 rawTrackLayer = null; snappedTrackLayer = null;
                 if (activePlaybackPoints.length) {
                     const first = activePlaybackPoints[0];
-                    playbackMarker = L.circleMarker([first.lat, first.lng], { radius: 8, fillColor: '#f43f5e', color: 'white', weight: 2, fillOpacity: 1 }).addTo(map);
+                    playbackMarker = L.marker([first.lat, first.lng], { icon: createPlaybackIcon() }).addTo(map);
                     playbackIndex = 0;
                     updatePlaybackProgress();
                 }
@@ -680,13 +690,13 @@
 
                 if (isCompareMode) {
                     if (rawPlaybackPoints.length) rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2, dashArray: '4 4' }).addTo(map);
-                    if (snappedPlaybackPoints.length) snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 4 }).addTo(map);
+                    if (snappedPlaybackPoints.length) snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 3, dashArray: '1 10', lineCap: 'round' }).addTo(map);
                 } else {
                     if (isSnappedMode && snappedPlaybackPoints.length) {
-                        snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 4 }).addTo(map);
+                        snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 3, dashArray: '1 10', lineCap: 'round' }).addTo(map);
                         activePlaybackPoints = snappedPlaybackPoints;
                     } else if (rawPlaybackPoints.length) {
-                        rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2 }).addTo(map);
+                        rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2, dashArray: '4 4' }).addTo(map);
                         activePlaybackPoints = rawPlaybackPoints;
                     }
                 }
@@ -736,7 +746,6 @@
                     playbackMarker.setLatLng([p.lat, p.lng]);
                     updatePlaybackProgress();
                 }, 1000 / playbackSpeed);
-                // Auto-minimize modal when playback starts
                 minimizeTripModal();
             };
 
