@@ -652,8 +652,10 @@
                         }
                         updatePlaybackLayers();
                     });
+                    // Initial layer: use raw until snapping done
                     activePlaybackPoints = rawPlaybackPoints;
                     setupPlaybackPath();
+                    updatePlaybackLayers();
                 } catch (e) {
                     console.error(e);
                     alert('Failed to fetch telemetry: ' + e.message);
@@ -670,11 +672,16 @@
                 });
             }
 
-            function setupPlaybackPath() {
-                if (playbackMarker) map.removeLayer(playbackMarker);
+            function clearPlaybackTracks() {
                 if (rawTrackLayer) map.removeLayer(rawTrackLayer);
                 if (snappedTrackLayer) map.removeLayer(snappedTrackLayer);
-                rawTrackLayer = null; snappedTrackLayer = null;
+                rawTrackLayer = null;
+                snappedTrackLayer = null;
+            }
+
+            function setupPlaybackPath() {
+                if (playbackMarker) map.removeLayer(playbackMarker);
+                playbackMarker = null;
                 if (activePlaybackPoints.length) {
                     const first = activePlaybackPoints[0];
                     playbackMarker = L.marker([first.lat, first.lng], { icon: createPlaybackIcon() }).addTo(map);
@@ -684,19 +691,16 @@
             }
 
             function updatePlaybackLayers() {
-                if (rawTrackLayer) map.removeLayer(rawTrackLayer);
-                if (snappedTrackLayer) map.removeLayer(snappedTrackLayer);
-                rawTrackLayer = null; snappedTrackLayer = null;
-
+                clearPlaybackTracks();
                 if (isCompareMode) {
                     if (rawPlaybackPoints.length) rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2, dashArray: '4 4' }).addTo(map);
-                    if (snappedPlaybackPoints.length) snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 3, dashArray: '1 10', lineCap: 'round' }).addTo(map);
+                    if (snappedPlaybackPoints.length) snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#8B4513', weight: 4 }).addTo(map);
                 } else {
                     if (isSnappedMode && snappedPlaybackPoints.length) {
-                        snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#58a6ff', weight: 3, dashArray: '1 10', lineCap: 'round' }).addTo(map);
+                        snappedTrackLayer = L.polyline(snappedPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#8B4513', weight: 4 }).addTo(map);
                         activePlaybackPoints = snappedPlaybackPoints;
                     } else if (rawPlaybackPoints.length) {
-                        rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#e94560', weight: 2, dashArray: '4 4' }).addTo(map);
+                        rawTrackLayer = L.polyline(rawPlaybackPoints.map(p => [p.lat, p.lng]), { color: '#8B4513', weight: 4 }).addTo(map);
                         activePlaybackPoints = rawPlaybackPoints;
                     }
                 }
@@ -744,6 +748,7 @@
                     playbackIndex++;
                     const p = activePlaybackPoints[playbackIndex];
                     playbackMarker.setLatLng([p.lat, p.lng]);
+                    map.panTo([p.lat, p.lng], { animate: true, duration: 0.5, easeLinearity: 0.25 });
                     updatePlaybackProgress();
                 }, 1000 / playbackSpeed);
                 minimizeTripModal();
@@ -773,6 +778,7 @@
                     playbackIndex = Math.floor(pct * (activePlaybackPoints.length - 1));
                     const p = activePlaybackPoints[playbackIndex];
                     playbackMarker.setLatLng([p.lat, p.lng]);
+                    map.panTo([p.lat, p.lng], { animate: true, duration: 0.5 });
                     updatePlaybackProgress();
                 }
             };
